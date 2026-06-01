@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="CharacterData" load_steps=9 format=3]
+
+[ext_resource type="Script" path="res://resources/character_data.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/marisa/marisa1.png" id="2_form1"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/marisa/marisa2whitever.png" id="3_form2"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/marisa/marisa3whitever.png" id="4_form3"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/marisa/marisatatie.png" id="5_tatie"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/marisa/marisa2whitever.png" id="6_defeated"]
+[ext_resource type="Texture2D" path="res://assets/sprites/ui/mahounomori.png" id="7_bg"]
+[ext_resource type="AudioStream" path="res://assets/sounds/妖精大戦争 EXTRAボス・霧雨 魔理沙のテーマ メイガスナイト 1piano.mp3" id="8_bgm"]
+
+[resource]
+script = ExtResource("1_script")
+char_id = "marisa"
+display_name = "魔理沙"
+battle_forms = Array[Texture2D]([ExtResource("2_form1"), ExtResource("3_form2"), ExtResource("4_form3")])
+tatie_sprite = ExtResource("5_tatie")
+defeated_sprite = ExtResource("6_defeated")
+stage_background = ExtResource("7_bg")
+stage_bgm = ExtResource("8_bgm")
+max_hp = 100.0

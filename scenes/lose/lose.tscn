@@ -1,0 +1,33 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scenes/lose/lose.gd" id="1_script"]
+[ext_resource type="FontFile" path="res://assets/fonts/NotoSansJP-Regular.ttf" id="2_font"]
+
+[node name="LoseLayer" type="CanvasLayer"]
+layer = 3
+visible = false
+script = ExtResource("1_script")
+
+[node name="PlayerLoseImage" type="TextureRect" parent="."]
+anchor_right = 1.0
+anchor_bottom = 0.7
+expand_mode = 1
+stretch_mode = 5
+
+[node name="RetryButton" type="Button" parent="."]
+anchor_left = 0.1
+anchor_top = 0.75
+anchor_right = 0.9
+anchor_bottom = 0.85
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 48
+text = "もう一度"
+
+[node name="TitleButton" type="Button" parent="."]
+anchor_left = 0.1
+anchor_top = 0.88
+anchor_right = 0.9
+anchor_bottom = 0.97
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 48
+text = "タイトルへ"
