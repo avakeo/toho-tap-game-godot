@@ -1,3 +1,5 @@
 *.meta
 .godot/
 *.import
+.DS_Store
+各キャラ立ち絵、sdキャラ,BGM/

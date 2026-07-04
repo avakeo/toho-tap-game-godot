@@ -5,6 +5,7 @@ extends Resource
 @export var display_name: String = ""
 @export var battle_forms: Array[Texture2D] = []
 @export var tatie_sprite: Texture2D
+@export var sd_sprite: Texture2D
 @export var defeated_sprite: Texture2D
 @export var stage_background: Texture2D
 @export var stage_bgm: AudioStream

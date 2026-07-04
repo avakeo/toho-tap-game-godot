@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="CharacterData" load_steps=9 format=3]
+[gd_resource type="Resource" script_class="CharacterData" load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://resources/character_data.gd" id="1_script"]
 [ext_resource type="Texture2D" path="res://assets/sprites/characters/reisen/reisensentoutatie.png" id="2_form1"]
@@ -8,6 +8,7 @@
 [ext_resource type="Texture2D" path="res://assets/sprites/characters/reisen/reisensentoutatiehaiboku1.png" id="6_defeated"]
 [ext_resource type="Texture2D" path="res://assets/sprites/ui/tikurin.png" id="7_bg"]
 [ext_resource type="AudioStream" path="res://assets/sounds/東方原曲　永夜抄　５面ボス鈴仙テーマ　狂気の瞳　～ Invisible Full Moon 1piano.mp3" id="8_bgm"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/reisen/reisenSD.png" id="9_sd"]
 
 [resource]
 script = ExtResource("1_script")
@@ -15,6 +16,7 @@ char_id = "reisen"
 display_name = "鈴仙"
 battle_forms = Array[Texture2D]([ExtResource("2_form1"), ExtResource("3_form2"), ExtResource("4_form3")])
 tatie_sprite = ExtResource("5_tatie")
+sd_sprite = ExtResource("9_sd")
 defeated_sprite = ExtResource("6_defeated")
 stage_background = ExtResource("7_bg")
 stage_bgm = ExtResource("8_bgm")

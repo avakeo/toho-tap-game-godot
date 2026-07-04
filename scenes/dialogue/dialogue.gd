@@ -22,6 +22,9 @@ var _left_char: CharacterData
 var _right_char: CharacterData
 var _on_finished: Callable
 
+func _ready() -> void:
+	advance_button.pressed.connect(_on_advance_pressed)
+
 func start_dialogue(csv_path: String, left_char: CharacterData, right_char: CharacterData, on_finished: Callable) -> void:
 	_left_char = left_char
 	_right_char = right_char

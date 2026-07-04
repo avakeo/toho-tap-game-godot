@@ -7,6 +7,10 @@ extends CanvasLayer
 signal retry_requested
 signal title_requested
 
+func _ready() -> void:
+	retry_button.pressed.connect(_on_retry_button_pressed)
+	title_button.pressed.connect(_on_title_button_pressed)
+
 func show_lose(defeated_texture: Texture2D) -> void:
 	player_lose_image.texture = defeated_texture
 	visible = true
