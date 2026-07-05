@@ -1,52 +1,102 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scenes/dialogue/dialogue.gd" id="1_script"]
 [ext_resource type="FontFile" path="res://assets/fonts/NotoSansJP-Regular.ttf" id="2_font"]
+
+[sub_resource type="StyleBoxFlat" id="sb_dialogue_box"]
+bg_color = Color(0.09, 0.09, 0.13, 0.88)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 1, 1, 0.16)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+
+[sub_resource type="StyleBoxFlat" id="sb_name_plate"]
+bg_color = Color(0.72, 0.15, 0.25, 0.95)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
 
 [node name="DialogueLayer" type="CanvasLayer"]
 layer = 2
 visible = false
 script = ExtResource("1_script")
 
+[node name="Dimmer" type="ColorRect" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0, 0.25)
+
 [node name="LeftCharImage" type="TextureRect" parent="."]
-anchor_right = 0.5
-anchor_bottom = 0.8
-offset_right = -10.0
+z_index = 1
+anchor_left = -0.06
+anchor_top = 0.18
+anchor_right = 0.56
+anchor_bottom = 0.785
 expand_mode = 1
 stretch_mode = 5
 
 [node name="RightCharImage" type="TextureRect" parent="."]
-anchor_left = 0.5
-anchor_right = 1.0
-anchor_bottom = 0.8
-offset_left = 10.0
+z_index = 1
+anchor_left = 0.44
+anchor_top = 0.18
+anchor_right = 1.06
+anchor_bottom = 0.785
 expand_mode = 1
 stretch_mode = 5
-layout_direction = 2
 
 [node name="DialogueBox" type="Panel" parent="."]
-anchor_top = 0.75
+z_index = 3
+anchor_left = 0.025
+anchor_top = 0.765
+anchor_right = 0.975
+anchor_bottom = 0.985
+theme_override_styles/panel = SubResource("sb_dialogue_box")
+
+[node name="NamePlate" type="Panel" parent="DialogueBox"]
+offset_left = 28.0
+offset_top = -34.0
+offset_right = 268.0
+offset_bottom = 26.0
+theme_override_styles/panel = SubResource("sb_name_plate")
+
+[node name="NameLabel" type="Label" parent="DialogueBox/NamePlate"]
 anchor_right = 1.0
 anchor_bottom = 1.0
-
-[node name="NameLabel" type="Label" parent="DialogueBox"]
-anchor_right = 1.0
-offset_top = 10.0
-offset_bottom = 60.0
-offset_left = 20.0
 theme_override_fonts/font = ExtResource("2_font")
-theme_override_font_sizes/font_size = 36
+theme_override_font_sizes/font_size = 32
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="BodyLabel" type="Label" parent="DialogueBox"]
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_top = 70.0
-offset_left = 20.0
-offset_right = -20.0
-offset_bottom = -20.0
+offset_left = 36.0
+offset_top = 44.0
+offset_right = -36.0
+offset_bottom = -24.0
 theme_override_fonts/font = ExtResource("2_font")
-theme_override_font_sizes/font_size = 32
+theme_override_font_sizes/font_size = 33
 autowrap_mode = 3
+
+[node name="AdvanceHint" type="Label" parent="DialogueBox"]
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -70.0
+offset_top = -56.0
+offset_right = -28.0
+offset_bottom = -16.0
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 30
+theme_override_colors/font_color = Color(1, 1, 1, 0.7)
+text = "▼"
 
 [node name="AdvanceButton" type="Button" parent="."]
 anchor_right = 1.0

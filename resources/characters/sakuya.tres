@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="CharacterData" load_steps=10 format=3]
+[gd_resource type="Resource" script_class="CharacterData" load_steps=14 format=3]
 
 [ext_resource type="Script" path="res://resources/character_data.gd" id="1_script"]
 [ext_resource type="Texture2D" path="res://assets/sprites/characters/sakuya/sakuya1.png" id="2_form1"]
@@ -9,6 +9,10 @@
 [ext_resource type="Texture2D" path="res://assets/sprites/ui/koumakan.png" id="7_bg"]
 [ext_resource type="AudioStream" path="res://assets/sounds/東方原曲　紅魔郷　５面テーマ　メイドと血の懐中時計1piano.mp3" id="8_bgm"]
 [ext_resource type="Texture2D" path="res://assets/sprites/characters/sakuya/sakuyaSD1.png" id="9_sd"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/sakuya/sakuyatatieshinken.png" id="10_shinken"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/sakuya/sakuyatatieressei.png" id="11_ressei"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/sakuya/sakuyatatiesurprise.png" id="12_odoroki"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/sakuya/sakuyatatiewarai.png" id="13_warai"]
 
 [resource]
 script = ExtResource("1_script")
@@ -16,6 +20,12 @@ char_id = "sakuya"
 display_name = "咲夜"
 battle_forms = Array[Texture2D]([ExtResource("2_form1"), ExtResource("3_form2"), ExtResource("4_form3")])
 tatie_sprite = ExtResource("5_tatie")
+tatie_expressions = {
+"odoroki": ExtResource("12_odoroki"),
+"ressei": ExtResource("11_ressei"),
+"shinken": ExtResource("10_shinken"),
+"warai": ExtResource("13_warai")
+}
 sd_sprite = ExtResource("9_sd")
 defeated_sprite = ExtResource("6_defeated")
 stage_background = ExtResource("7_bg")

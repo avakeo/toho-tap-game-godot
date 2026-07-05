@@ -40,10 +40,10 @@ anchor_left = 1.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -640.0
-offset_top = -160.0
-offset_right = -380.0
-offset_bottom = -70.0
+offset_left = -560.0
+offset_top = -290.0
+offset_right = -300.0
+offset_bottom = -200.0
 theme_override_fonts/font = ExtResource("2_font")
 theme_override_font_sizes/font_size = 38
 text = "キャラ変更"
@@ -54,10 +54,10 @@ anchor_left = 1.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -566.0
-offset_top = -325.0
-offset_right = -306.0
-offset_bottom = -235.0
+offset_left = -280.0
+offset_top = -290.0
+offset_right = -20.0
+offset_bottom = -200.0
 theme_override_fonts/font = ExtResource("2_font")
 theme_override_font_sizes/font_size = 38
 text = "BGM変更"
@@ -68,13 +68,13 @@ anchor_left = 1.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -445.0
-offset_top = -446.0
-offset_right = -185.0
-offset_bottom = -356.0
+offset_left = -560.0
+offset_top = -394.0
+offset_right = -300.0
+offset_bottom = -304.0
 theme_override_fonts/font = ExtResource("2_font")
 theme_override_font_sizes/font_size = 38
-text = "音量調節"
+text = "設定"
 
 [node name="GachaButton" type="Button" parent="."]
 visible = false
@@ -83,12 +83,40 @@ anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = -280.0
-offset_top = -490.0
+offset_top = -394.0
 offset_right = -20.0
-offset_bottom = -400.0
+offset_bottom = -304.0
 theme_override_fonts/font = ExtResource("2_font")
 theme_override_font_sizes/font_size = 38
 text = "ガチャ"
+
+[node name="GalleryButton" type="Button" parent="."]
+visible = false
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -560.0
+offset_top = -498.0
+offset_right = -300.0
+offset_bottom = -408.0
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 38
+text = "図鑑"
+
+[node name="TitleButton" type="Button" parent="."]
+visible = false
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -280.0
+offset_top = -498.0
+offset_right = -20.0
+offset_bottom = -408.0
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 38
+text = "タイトルへ"
 
 [node name="CharPanel" type="Panel" parent="."]
 visible = false
@@ -231,31 +259,50 @@ text = "閉じる"
 [node name="VolumePanel" type="Panel" parent="."]
 visible = false
 anchor_left = 0.1
-anchor_top = 0.35
+anchor_top = 0.3
 anchor_right = 0.9
-anchor_bottom = 0.65
+anchor_bottom = 0.7
 theme_override_styles/panel = SubResource("sb_panel")
 
 [node name="TitleLabel" type="Label" parent="VolumePanel"]
 anchor_right = 1.0
-anchor_bottom = 0.25
+anchor_bottom = 0.18
 theme_override_fonts/font = ExtResource("2_font")
 theme_override_font_sizes/font_size = 52
 horizontal_alignment = 1
 vertical_alignment = 1
-text = "音量調節"
+text = "設定"
+
+[node name="VolumeLabel" type="Label" parent="VolumePanel"]
+anchor_left = 0.1
+anchor_top = 0.2
+anchor_right = 0.9
+anchor_bottom = 0.3
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 36
+vertical_alignment = 1
+text = "音量"
 
 [node name="VolumeSlider" type="HSlider" parent="VolumePanel"]
 anchor_left = 0.1
-anchor_top = 0.4
+anchor_top = 0.32
 anchor_right = 0.9
-anchor_bottom = 0.55
+anchor_bottom = 0.42
 max_value = 100.0
 value = 100.0
 
+[node name="SkipTalkCheck" type="CheckButton" parent="VolumePanel"]
+anchor_left = 0.1
+anchor_top = 0.5
+anchor_right = 0.9
+anchor_bottom = 0.62
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 32
+text = "クリア済みステージの会話をスキップ"
+
 [node name="CloseButton" type="Button" parent="VolumePanel"]
 anchor_left = 0.3
-anchor_top = 0.68
+anchor_top = 0.72
 anchor_right = 0.7
 anchor_bottom = 0.92
 theme_override_fonts/font = ExtResource("2_font")

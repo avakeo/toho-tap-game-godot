@@ -3,6 +3,8 @@ extends CanvasLayer
 signal player_char_selected(char_data: CharacterData)
 signal opponent_selected(char_data: CharacterData)
 signal bgm_selected(path: String)
+signal gallery_requested
+signal title_requested
 
 const JP_FONT := preload("res://assets/fonts/NotoSansJP-Regular.ttf")
 
@@ -11,6 +13,8 @@ const JP_FONT := preload("res://assets/fonts/NotoSansJP-Regular.ttf")
 @onready var bgm_button: Button = $BGMButton
 @onready var volume_button: Button = $VolumeButton
 @onready var gacha_button: Button = $GachaButton
+@onready var gallery_button: Button = $GalleryButton
+@onready var title_button: Button = $TitleButton
 
 @onready var char_panel: Panel = $CharPanel
 @onready var player_list: VBoxContainer = $CharPanel/Columns/PlayerColumn/PlayerScroll/PlayerList
@@ -26,6 +30,7 @@ const JP_FONT := preload("res://assets/fonts/NotoSansJP-Regular.ttf")
 
 @onready var volume_panel: Panel = $VolumePanel
 @onready var volume_slider: HSlider = $VolumePanel/VolumeSlider
+@onready var skip_talk_check: CheckButton = $VolumePanel/SkipTalkCheck
 @onready var volume_close: Button = $VolumePanel/CloseButton
 
 @onready var gacha_panel: Panel = $GachaPanel
@@ -47,6 +52,8 @@ func _ready() -> void:
 	bgm_button.pressed.connect(_on_bgm_button)
 	volume_button.pressed.connect(_open_panel.bind(volume_panel))
 	gacha_button.pressed.connect(_open_panel.bind(gacha_panel))
+	gallery_button.pressed.connect(func(): gallery_requested.emit())
+	title_button.pressed.connect(func(): title_requested.emit())
 	char_close.pressed.connect(char_panel.hide)
 	bgm_close.pressed.connect(bgm_panel.hide)
 	volume_close.pressed.connect(volume_panel.hide)
@@ -58,6 +65,9 @@ func _ready() -> void:
 
 	var master := AudioServer.get_bus_index("Master")
 	volume_slider.set_value_no_signal(db_to_linear(AudioServer.get_bus_volume_db(master)) * 100.0)
+
+	skip_talk_check.set_pressed_no_signal(GameState.skip_cleared_dialogue)
+	skip_talk_check.toggled.connect(_on_skip_talk_toggled)
 
 	_set_wheel_buttons_visible(false)
 
@@ -80,7 +90,7 @@ func _on_toggle() -> void:
 		_set_wheel_buttons_visible(true)
 
 func _set_wheel_buttons_visible(open: bool) -> void:
-	var buttons := [char_button, bgm_button, volume_button, gacha_button]
+	var buttons := [char_button, bgm_button, volume_button, gacha_button, gallery_button, title_button]
 	for b in buttons:
 		b.visible = open
 	if not open:
@@ -171,6 +181,10 @@ func _on_bgm_choice(keep_on_opponent_change: bool) -> void:
 	bgm_choice_panel.hide()
 	_rebuild_bgm_list()
 	bgm_selected.emit(_pending_bgm_path)
+
+func _on_skip_talk_toggled(pressed: bool) -> void:
+	GameState.skip_cleared_dialogue = pressed
+	GameState.save_progress()
 
 func _on_volume_changed(value: float) -> void:
 	var master := AudioServer.get_bus_index("Master")

@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://scenes/game/game.gd" id="1_script"]
 [ext_resource type="PackedScene" path="res://scenes/dialogue/dialogue.tscn" id="2_dialogue"]
@@ -6,7 +6,6 @@
 [ext_resource type="PackedScene" path="res://scenes/result/result.tscn" id="4_result"]
 [ext_resource type="FontFile" path="res://assets/fonts/NotoSansJP-Regular.ttf" id="5_font"]
 [ext_resource type="PackedScene" path="res://scenes/option_wheel/option_wheel.tscn" id="6_wheel"]
-[ext_resource type="PackedScene" path="res://scenes/pause/pause.tscn" id="7_pause"]
 
 [sub_resource type="StyleBoxFlat" id="sb_hp_bg"]
 bg_color = Color(0.78, 0.13, 0.13, 1)
@@ -27,6 +26,25 @@ corner_radius_top_right = 10
 corner_radius_bottom_right = 10
 corner_radius_bottom_left = 10
 
+[sub_resource type="StyleBoxFlat" id="sb_xp_bg"]
+bg_color = Color(0.15, 0.15, 0.2, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.12, 0.12, 0.12, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="sb_xp_fill"]
+bg_color = Color(0.3, 0.6, 1.0, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
 [node name="Game" type="Node"]
 script = ExtResource("1_script")
 
@@ -45,10 +63,10 @@ layer = 1
 visible = false
 
 [node name="EnemySprite" type="TextureRect" parent="BattleLayer"]
-anchor_left = 0.1
-anchor_top = 0.16
-anchor_right = 0.9
-anchor_bottom = 0.7
+anchor_left = 0.02
+anchor_top = 0.135
+anchor_right = 0.98
+anchor_bottom = 0.76
 expand_mode = 1
 stretch_mode = 5
 
@@ -71,10 +89,10 @@ theme_override_styles/fill = SubResource("sb_hp_fill")
 show_percentage = false
 
 [node name="PlayerSDSprite" type="TextureRect" parent="BattleLayer"]
-anchor_left = 0.017
-anchor_top = 0.54
-anchor_right = 0.202
-anchor_bottom = 0.688
+anchor_left = 0.005
+anchor_top = 0.47
+anchor_right = 0.285
+anchor_bottom = 0.69
 expand_mode = 1
 stretch_mode = 5
 
@@ -96,13 +114,95 @@ theme_override_styles/background = SubResource("sb_hp_bg")
 theme_override_styles/fill = SubResource("sb_hp_fill")
 show_percentage = false
 
+[node name="PlayerXPBar" type="ProgressBar" parent="BattleLayer"]
+anchor_left = 0.017
+anchor_top = 0.758
+anchor_right = 0.202
+anchor_bottom = 0.774
+theme_override_styles/background = SubResource("sb_xp_bg")
+theme_override_styles/fill = SubResource("sb_xp_fill")
+show_percentage = false
+
+[node name="PlayerLevelLabel" type="Label" parent="BattleLayer"]
+anchor_left = 0.017
+anchor_top = 0.778
+anchor_right = 0.202
+anchor_bottom = 0.805
+theme_override_fonts/font = ExtResource("5_font")
+theme_override_font_sizes/font_size = 24
+text = "Lv.1"
+
 [node name="TapButton" type="Button" parent="BattleLayer"]
-anchor_left = 0.1
-anchor_top = 0.16
-anchor_right = 0.9
-anchor_bottom = 0.7
+anchor_left = 0.02
+anchor_top = 0.135
+anchor_right = 0.98
+anchor_bottom = 0.76
 flat = true
 text = ""
+
+[node name="StageLabel" type="Label" parent="BattleLayer"]
+anchor_left = 0.037
+anchor_top = 0.0
+anchor_right = 0.45
+anchor_bottom = 0.03
+theme_override_fonts/font = ExtResource("5_font")
+theme_override_font_sizes/font_size = 24
+theme_override_colors/font_outline_color = Color(0.1, 0.1, 0.1, 1)
+theme_override_constants/outline_size = 6
+vertical_alignment = 1
+text = "Stage 1"
+
+[node name="CoinLabel" type="Label" parent="BattleLayer"]
+anchor_left = 0.45
+anchor_top = 0.0
+anchor_right = 0.963
+anchor_bottom = 0.03
+theme_override_fonts/font = ExtResource("5_font")
+theme_override_font_sizes/font_size = 24
+theme_override_colors/font_color = Color(1, 0.85, 0.3, 1)
+theme_override_colors/font_outline_color = Color(0.15, 0.1, 0, 1)
+theme_override_constants/outline_size = 6
+horizontal_alignment = 2
+vertical_alignment = 1
+text = "コイン 0"
+
+[node name="PhaseLabel" type="Label" parent="BattleLayer"]
+anchor_left = 0.5
+anchor_top = 0.033
+anchor_right = 0.963
+anchor_bottom = 0.063
+theme_override_fonts/font = ExtResource("5_font")
+theme_override_font_sizes/font_size = 24
+theme_override_colors/font_outline_color = Color(0.1, 0.1, 0.1, 1)
+theme_override_constants/outline_size = 6
+horizontal_alignment = 2
+vertical_alignment = 1
+text = "Phase 1/3"
+
+[node name="EnemyHPValueLabel" type="Label" parent="BattleLayer"]
+anchor_left = 0.037
+anchor_top = 0.067
+anchor_right = 0.963
+anchor_bottom = 0.132
+theme_override_fonts/font = ExtResource("5_font")
+theme_override_font_sizes/font_size = 26
+theme_override_colors/font_outline_color = Color(0.1, 0.1, 0.1, 1)
+theme_override_constants/outline_size = 6
+horizontal_alignment = 1
+vertical_alignment = 1
+text = "0 / 0"
+
+[node name="PlayerHPValueLabel" type="Label" parent="BattleLayer"]
+anchor_left = 0.21
+anchor_top = 0.72
+anchor_right = 0.45
+anchor_bottom = 0.755
+theme_override_fonts/font = ExtResource("5_font")
+theme_override_font_sizes/font_size = 20
+theme_override_colors/font_outline_color = Color(0.1, 0.1, 0.1, 1)
+theme_override_constants/outline_size = 5
+vertical_alignment = 1
+text = "0 / 0"
 
 [node name="DialogueLayer" parent="." instance=ExtResource("2_dialogue")]
 
@@ -111,5 +211,3 @@ text = ""
 [node name="ResultLayer" parent="." instance=ExtResource("4_result")]
 
 [node name="OptionWheel" parent="." instance=ExtResource("6_wheel")]
-
-[node name="PauseLayer" parent="." instance=ExtResource("7_pause")]
