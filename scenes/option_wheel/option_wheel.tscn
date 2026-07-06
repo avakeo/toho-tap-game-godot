@@ -1,7 +1,7 @@
 [gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scenes/option_wheel/option_wheel.gd" id="1_script"]
-[ext_resource type="FontFile" path="res://assets/fonts/NotoSansJP-Regular.ttf" id="2_font"]
+[ext_resource type="FontFile" path="res://assets/fonts/ZenMaruGothic-Medium.ttf" id="2_font"]
 
 [sub_resource type="StyleBoxFlat" id="sb_toggle_off"]
 bg_color = Color(0.25, 0.25, 0.3, 1)

@@ -8,7 +8,7 @@ var overlay_mode := false
 const CHAR_IDS := ["reimu", "marisa", "sakuya", "reisen", "sanae", "youmu"]
 const TALK_KINDS := [["talk1", "開幕"], ["talk2", "中間①"], ["talk3", "中間②"], ["win", "勝利"], ["lose", "敗北"]]
 const PLACEHOLDER_TEXT := "会話が用意されていない"
-const FONT := preload("res://assets/fonts/NotoSansJP-Regular.ttf")
+const FONT := preload("res://assets/fonts/ZenMaruGothic-Medium.ttf")
 
 @onready var title_label: Label = $TitleLabel
 @onready var back_button: Button = $BackButton

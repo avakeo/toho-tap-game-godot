@@ -7,7 +7,7 @@ signal gallery_requested
 signal title_requested
 signal coins_changed
 
-const JP_FONT := preload("res://assets/fonts/NotoSansJP-Regular.ttf")
+const JP_FONT := preload("res://assets/fonts/ZenMaruGothic-Medium.ttf")
 
 @onready var toggle_button: Button = $ToggleButton
 @onready var char_button: Button = $CharButton
