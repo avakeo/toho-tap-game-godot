@@ -5,6 +5,7 @@ signal opponent_selected(char_data: CharacterData)
 signal bgm_selected(path: String)
 signal gallery_requested
 signal title_requested
+signal coins_changed
 
 const JP_FONT := preload("res://assets/fonts/NotoSansJP-Regular.ttf")
 
@@ -35,9 +36,17 @@ const JP_FONT := preload("res://assets/fonts/NotoSansJP-Regular.ttf")
 
 @onready var gacha_panel: Panel = $GachaPanel
 @onready var roll_button: Button = $GachaPanel/RollButton
+@onready var ten_roll_button: Button = $GachaPanel/TenRollButton
+@onready var gacha_coin_label: Label = $GachaPanel/GachaCoinLabel
+@onready var pity_label: Label = $GachaPanel/PityLabel
 @onready var result_image: TextureRect = $GachaPanel/ResultImage
 @onready var result_label: Label = $GachaPanel/ResultLabel
 @onready var gacha_close: Button = $GachaPanel/CloseButton
+
+# ガチャ設定(ここの定数で調整する)
+const GACHA_COST_SINGLE := 100    # 1回の消費コイン
+const GACHA_COST_TEN := 900       # 10連の消費コイン(1回分お得)
+const GACHA_PITY_COUNT := 30      # 天井: この回数引くと未所持の自キャラ確定
 
 var _chars: Array[CharacterData] = []
 var _wheel_open := false
@@ -51,7 +60,7 @@ func _ready() -> void:
 	char_button.pressed.connect(_on_char_button)
 	bgm_button.pressed.connect(_on_bgm_button)
 	volume_button.pressed.connect(_open_panel.bind(volume_panel))
-	gacha_button.pressed.connect(_open_panel.bind(gacha_panel))
+	gacha_button.pressed.connect(_on_gacha_button)
 	gallery_button.pressed.connect(func(): gallery_requested.emit())
 	title_button.pressed.connect(func(): title_requested.emit())
 	char_close.pressed.connect(char_panel.hide)
@@ -59,6 +68,9 @@ func _ready() -> void:
 	volume_close.pressed.connect(volume_panel.hide)
 	gacha_close.pressed.connect(gacha_panel.hide)
 	roll_button.pressed.connect(_on_roll)
+	ten_roll_button.pressed.connect(_on_roll_ten)
+	roll_button.text = "1回 %dコイン" % GACHA_COST_SINGLE
+	ten_roll_button.text = "10連 %dコイン" % GACHA_COST_TEN
 	volume_slider.value_changed.connect(_on_volume_changed)
 	bgm_keep_button.pressed.connect(_on_bgm_choice.bind(true))
 	bgm_reset_button.pressed.connect(_on_bgm_choice.bind(false))
@@ -191,33 +203,113 @@ func _on_volume_changed(value: float) -> void:
 	AudioServer.set_bus_volume_db(master, linear_to_db(maxf(value / 100.0, 0.0001)))
 	AudioServer.set_bus_mute(master, value <= 0.0)
 
-func _on_roll() -> void:
+func _on_gacha_button() -> void:
+	_update_gacha_ui()
+	_open_panel(gacha_panel)
+
+func _update_gacha_ui() -> void:
+	gacha_coin_label.text = "所持コイン：%d" % GameState.coins
+	var remaining: int = maxi(GACHA_PITY_COUNT - GameState.gacha_pity_count, 1)
+	if _unowned_chars().is_empty():
+		pity_label.text = "自キャラはすべて入手済み！"
+	else:
+		pity_label.text = "あと%d回で未所持キャラ確定！" % remaining
+	roll_button.disabled = GameState.coins < GACHA_COST_SINGLE
+	ten_roll_button.disabled = GameState.coins < GACHA_COST_TEN
+
+func _unowned_chars() -> Array[CharacterData]:
+	var result: Array[CharacterData] = []
+	for c in _chars:
+		if not GameState.owned_char_ids.has(c.char_id):
+			result.append(c)
+	return result
+
+# 1回分の抽選。天井到達時は未所持の自キャラを確定排出する
+func _roll_prize() -> Dictionary:
+	GameState.gacha_pity_count += 1
+	var unowned := _unowned_chars()
+	if not unowned.is_empty() and GameState.gacha_pity_count >= GACHA_PITY_COUNT:
+		var pity_char: CharacterData = unowned.pick_random()
+		GameState.owned_char_ids.append(pity_char.char_id)
+		GameState.gacha_pity_count = 0
+		return {"type": "char", "char": pity_char, "new": true, "pity": true}
 	var pool: Array[Dictionary] = []
 	for c in _chars:
 		pool.append({"type": "char", "char": c})
 	for p in GameState.all_bgm_paths():
 		pool.append({"type": "bgm", "path": p})
 	if pool.is_empty():
-		return
-	var prize: Dictionary = pool.pick_random()
+		return {}
+	var prize: Dictionary = pool.pick_random().duplicate()
+	prize["pity"] = false
 	if prize.type == "char":
 		var c: CharacterData = prize.char
-		var dup: bool = GameState.owned_char_ids.has(c.char_id)
-		if not dup:
+		prize["new"] = not GameState.owned_char_ids.has(c.char_id)
+		if prize.new:
 			GameState.owned_char_ids.append(c.char_id)
-		result_image.texture = c.tatie_sprite
-		if dup:
-			result_label.text = "【キャラ】%s\n（すでに持っている）" % c.display_name
-		else:
-			result_label.text = "【キャラ】%s を手に入れた！\nキャラ変更で使えるよ" % c.display_name
+			GameState.gacha_pity_count = 0
 	else:
-		var path: String = prize.path
-		var dup: bool = GameState.owned_bgm_paths.has(path)
-		if not dup:
-			GameState.owned_bgm_paths.append(path)
-		result_image.texture = null
-		var bname: String = path.get_file().get_basename()
-		if dup:
-			result_label.text = "♪【BGM】%s\n（すでに持っている）" % bname
+		prize["new"] = not GameState.owned_bgm_paths.has(prize.path)
+		if prize.new:
+			GameState.owned_bgm_paths.append(prize.path)
+	return prize
+
+func _on_roll() -> void:
+	if not GameState.spend_coins(GACHA_COST_SINGLE):
+		result_label.text = "コインが足りない…（1回 %dコイン）" % GACHA_COST_SINGLE
+		return
+	var prize := _roll_prize()
+	GameState.save_progress()
+	_show_single_result(prize)
+	_update_gacha_ui()
+	coins_changed.emit()
+
+func _show_single_result(prize: Dictionary) -> void:
+	if prize.is_empty():
+		return
+	result_label.add_theme_font_size_override("font_size", 36)
+	if prize.type == "char":
+		var c: CharacterData = prize.char
+		result_image.texture = c.tatie_sprite
+		if prize.pity:
+			result_label.text = "天井到達！【キャラ】%s を手に入れた！\nキャラ変更で使えるよ" % c.display_name
+		elif prize.new:
+			result_label.text = "【キャラ】%s を手に入れた！\nキャラ変更で使えるよ" % c.display_name
 		else:
+			result_label.text = "【キャラ】%s\n（すでに持っている）" % c.display_name
+	else:
+		result_image.texture = null
+		var bname: String = prize.path.get_file().get_basename()
+		if prize.new:
 			result_label.text = "♪【BGM】%s を手に入れた！\nBGM変更で聴けるよ" % bname
+		else:
+			result_label.text = "♪【BGM】%s\n（すでに持っている）" % bname
+
+func _on_roll_ten() -> void:
+	if not GameState.spend_coins(GACHA_COST_TEN):
+		result_label.text = "コインが足りない…（10連 %dコイン）" % GACHA_COST_TEN
+		return
+	var lines: PackedStringArray = []
+	var last_new_char: CharacterData = null
+	for i in 10:
+		var prize := _roll_prize()
+		if prize.is_empty():
+			continue
+		var mark := ""
+		if prize.pity:
+			mark = "　★天井！"
+		elif prize.new:
+			mark = "　★NEW"
+		if prize.type == "char":
+			var c: CharacterData = prize.char
+			lines.append("【キャラ】%s%s" % [c.display_name, mark])
+			if prize.new:
+				last_new_char = c
+		else:
+			lines.append("♪ %s%s" % [prize.path.get_file().get_basename(), mark])
+	GameState.save_progress()
+	result_image.texture = last_new_char.tatie_sprite if last_new_char else null
+	result_label.add_theme_font_size_override("font_size", 24)
+	result_label.text = "\n".join(lines)
+	_update_gacha_ui()
+	coins_changed.emit()

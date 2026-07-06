@@ -76,6 +76,7 @@ func _ready() -> void:
 	option_wheel.bgm_selected.connect(_on_bgm_selected)
 	option_wheel.gallery_requested.connect(_on_gallery_requested)
 	option_wheel.title_requested.connect(_on_title_requested)
+	option_wheel.coins_changed.connect(_update_coin_ui)
 
 	start_stage()
 
