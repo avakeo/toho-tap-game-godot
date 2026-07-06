@@ -8,6 +8,8 @@ extends Resource
 # 表情名("shinken"/"ressei"/"odoroki"/"warai") -> 立ち絵差分
 @export var tatie_expressions: Dictionary = {}
 @export var sd_sprite: Texture2D
+# SD絵が左向きの場合true。バトルでは右向きに統一するため反転して表示する
+@export var sd_faces_left: bool = false
 @export var defeated_sprite: Texture2D
 @export var stage_background: Texture2D
 @export var stage_bgm: AudioStream

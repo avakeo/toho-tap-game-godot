@@ -27,6 +27,7 @@ tatie_expressions = {
 "warai": ExtResource("13_warai")
 }
 sd_sprite = ExtResource("9_sd")
+sd_faces_left = true
 defeated_sprite = ExtResource("6_defeated")
 stage_background = ExtResource("7_bg")
 stage_bgm = ExtResource("8_bgm")

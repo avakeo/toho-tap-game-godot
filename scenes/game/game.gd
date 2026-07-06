@@ -57,10 +57,19 @@ const COIN_STAGE_CLEAR_BONUS: int = 30
 
 var _state: State = State.DIALOGUE
 var _last_stage_enemy: CharacterData = null
+
+# ダメージ点滅用のスプライトごとのTween
+var _flash_tweens: Dictionary = {}
+# ダメージSE。assets/sounds/se/ に音声ファイルを置くと自動で読み込まれる
+var _se_attack: AudioStream   # 与ダメージ時
+var _se_damaged: AudioStream  # 被ダメージ時
+const SE_DIR := "res://assets/sounds/se/"
 # ステージ開始時点でクリア済みだったか(初回クリア時の勝利会話まで飛ばさないため)
 var _stage_was_cleared: bool = false
 
 func _ready() -> void:
+	se_player.bus = GameState.SE_BUS_NAME
+	_load_se()
 	_load_characters()
 	dialogue_layer.visible = false
 	battle_layer.visible = false
@@ -190,6 +199,8 @@ func start_battle_phase() -> void:
 	var form_index := current_phase - 1
 	enemy_sprite.texture = current_enemy.battle_forms[form_index]
 	player_sd_sprite.texture = player_data.sd_sprite
+	# SDキャラは右向き(敵の方向)で統一する
+	player_sd_sprite.flip_h = player_data.sd_faces_left
 
 	_refresh_player_stats()
 	_refresh_enemy_stats()
@@ -250,11 +261,43 @@ func _process(delta: float) -> void:
 		attack_timer = 0.0
 		_execute_enemy_attack()
 
+# attack.* = 与ダメージ時 / damage.* = 被ダメージ時 のSEを読み込む(無ければ鳴らさない)
+func _load_se() -> void:
+	_se_attack = _try_load_se("attack")
+	_se_damaged = _try_load_se("damage")
+
+func _try_load_se(base_name: String) -> AudioStream:
+	for ext in ["ogg", "mp3", "wav"]:
+		var path := SE_DIR + base_name + "." + ext
+		if ResourceLoader.exists(path):
+			return load(path)
+	return null
+
+func _play_se(stream: AudioStream) -> void:
+	if stream == null:
+		return
+	se_player.stream = stream
+	se_player.play()
+
+# ダメージ時にスプライトを赤く点滅させる
+func _flash_sprite(sprite: CanvasItem) -> void:
+	var prev: Tween = _flash_tweens.get(sprite)
+	if prev != null and prev.is_valid():
+		prev.kill()
+	sprite.modulate = Color.WHITE
+	var tween := create_tween()
+	for i in 2:
+		tween.tween_property(sprite, "modulate", Color(1.0, 0.3, 0.3, 0.75), 0.07)
+		tween.tween_property(sprite, "modulate", Color.WHITE, 0.07)
+	_flash_tweens[sprite] = tween
+
 func _on_tap_enemy() -> void:
 	if not battle_active:
 		return
 	enemy_hp = maxf(enemy_hp - tap_damage, 0.0)
 	enemy_hp_bar.value = enemy_hp
+	_flash_sprite(enemy_sprite)
+	_play_se(_se_attack)
 	GameState.add_coins(COIN_PER_TAP)
 	var levels_gained: int = GameState.add_xp(player_data.char_id, XP_PER_TAP)
 	if levels_gained > 0:
@@ -280,6 +323,8 @@ func _on_level_up() -> void:
 func _execute_enemy_attack() -> void:
 	player_hp = maxf(player_hp - enemy_damage, 0.0)
 	player_hp_bar.value = player_hp
+	_flash_sprite(player_sd_sprite)
+	_play_se(_se_damaged)
 	_update_hp_labels()
 	if player_hp <= 0.0:
 		_on_player_death()
