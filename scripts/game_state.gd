@@ -11,8 +11,9 @@ var owned_bgm_paths: Array[String] = []
 var selected_bgm_path: String = ""
 var bgm_keep_on_opponent_change: bool = true
 
-# char_id -> {"level": int, "xp": int}
-var char_levels: Dictionary = {}
+# レベル・XPは全キャラ共有
+var player_level: int = 1
+var player_xp: int = 0
 
 var coins: int = 0
 
@@ -64,29 +65,17 @@ func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST:
 		save_progress()
 
-func get_char_level(char_id: String) -> int:
-	if char_levels.has(char_id):
-		return char_levels[char_id]["level"]
-	return 1
-
-func get_char_xp(char_id: String) -> int:
-	if char_levels.has(char_id):
-		return char_levels[char_id]["xp"]
-	return 0
-
 func xp_to_next(level: int) -> int:
 	return XP_BASE_TO_NEXT + (level - 1) * XP_GROWTH_PER_LEVEL
 
-# 経験値を加算し、上がったレベル数を返す
-func add_xp(char_id: String, amount: int) -> int:
-	var entry: Dictionary = char_levels.get(char_id, {"level": 1, "xp": 0})
-	entry["xp"] += amount
+# 経験値を加算し、上がったレベル数を返す(レベルは全キャラ共有)
+func add_xp(amount: int) -> int:
+	player_xp += amount
 	var gained := 0
-	while entry["xp"] >= xp_to_next(entry["level"]):
-		entry["xp"] -= xp_to_next(entry["level"])
-		entry["level"] += 1
+	while player_xp >= xp_to_next(player_level):
+		player_xp -= xp_to_next(player_level)
+		player_level += 1
 		gained += 1
-	char_levels[char_id] = entry
 	if gained > 0:
 		save_progress()
 	return gained
@@ -114,16 +103,16 @@ func spend_coins(amount: int) -> bool:
 	save_progress()
 	return true
 
-func hp_bonus(char_id: String) -> float:
-	return HP_PER_LEVEL * float(get_char_level(char_id) - 1)
+func hp_bonus() -> float:
+	return HP_PER_LEVEL * float(player_level - 1)
 
-func atk_bonus(char_id: String) -> float:
-	return ATK_PER_LEVEL * float(get_char_level(char_id) - 1)
+func atk_bonus() -> float:
+	return ATK_PER_LEVEL * float(player_level - 1)
 
 func save_progress() -> void:
 	var cfg := ConfigFile.new()
-	for cid in char_levels:
-		cfg.set_value("levels", cid, char_levels[cid])
+	cfg.set_value("progress", "player_level", player_level)
+	cfg.set_value("progress", "player_xp", player_xp)
 	cfg.set_value("progress", "coins", coins)
 	cfg.set_value("progress", "cleared_stages", cleared_stages)
 	cfg.set_value("progress", "owned_char_ids", owned_char_ids)
@@ -162,10 +151,18 @@ func load_progress() -> void:
 	bgm_keep_on_opponent_change = cfg.get_value("settings", "bgm_keep_on_opponent_change", true)
 	master_volume = cfg.get_value("settings", "master_volume", 100.0)
 	se_volume = cfg.get_value("settings", "se_volume", 100.0)
-	if not cfg.has_section("levels"):
+	player_level = cfg.get_value("progress", "player_level", 0)
+	player_xp = cfg.get_value("progress", "player_xp", 0)
+	if player_level > 0:
 		return
-	for cid in cfg.get_section_keys("levels"):
-		char_levels[cid] = cfg.get_value("levels", cid)
+	# 旧セーブ(キャラ別レベル)からの移行: 一番高いレベルを共有レベルとして引き継ぐ
+	player_level = 1
+	if cfg.has_section("levels"):
+		for cid in cfg.get_section_keys("levels"):
+			var entry: Dictionary = cfg.get_value("levels", cid)
+			if entry.get("level", 1) > player_level:
+				player_level = entry.get("level", 1)
+				player_xp = entry.get("xp", 0)
 
 func all_bgm_paths() -> Array[String]:
 	var result: Array[String] = []

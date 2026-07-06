@@ -22,6 +22,7 @@ const GALLERY_SCENE := preload("res://scenes/gallery/gallery.tscn")
 @onready var coin_label: Label = $BattleLayer/CoinLabel
 @onready var player_sd_sprite: TextureRect = $BattleLayer/PlayerSDSprite
 @onready var player_level_label: Label = $BattleLayer/PlayerLevelLabel
+@onready var level_up_label: Label = $BattleLayer/LevelUpLabel
 @onready var player_xp_bar: ProgressBar = $BattleLayer/PlayerXPBar
 @onready var tap_button: Button = $BattleLayer/TapButton
 @onready var dialogue_layer = $DialogueLayer
@@ -223,23 +224,23 @@ func start_battle_phase() -> void:
 	attack_timer = 0.0
 	battle_active = true
 
-# レベルに応じたプレイヤーの最大HP・タップ攻撃力を反映
+# レベル(全キャラ共有)に応じたプレイヤーの最大HP・タップ攻撃力を反映
 func _refresh_player_stats() -> void:
-	player_max_hp = player_data.max_hp + GameState.hp_bonus(player_data.char_id)
-	tap_damage = TAP_DAMAGE + GameState.atk_bonus(player_data.char_id)
+	player_max_hp = player_data.max_hp + GameState.hp_bonus()
+	tap_damage = TAP_DAMAGE + GameState.atk_bonus()
 
 # 敵レベル(プレイヤーレベル+ステージ加算)とステージ係数で敵のHP・攻撃力を強化する
 func _refresh_enemy_stats() -> void:
 	var stage := float(current_enemy_index)
-	enemy_level = GameState.get_char_level(player_data.char_id) + current_enemy_index * ENEMY_LEVEL_PER_STAGE
+	enemy_level = GameState.player_level + current_enemy_index * ENEMY_LEVEL_PER_STAGE
 	enemy_max_hp = current_enemy.max_hp * (1.0 + ENEMY_HP_GROWTH_PER_STAGE * stage) \
 			+ ENEMY_HP_PER_LEVEL * float(enemy_level - 1)
 	enemy_damage = ENEMY_DAMAGE * (1.0 + ENEMY_ATK_GROWTH_PER_STAGE * stage) \
 			+ ENEMY_ATK_PER_LEVEL * float(enemy_level - 1)
 
 func _update_xp_ui() -> void:
-	var lvl: int = GameState.get_char_level(player_data.char_id)
-	var xp: int = GameState.get_char_xp(player_data.char_id)
+	var lvl: int = GameState.player_level
+	var xp: int = GameState.player_xp
 	var to_next: int = GameState.xp_to_next(lvl)
 	player_level_label.text = "Lv.%d  XP %d/%d" % [lvl, xp, to_next]
 	player_xp_bar.max_value = to_next
@@ -307,17 +308,17 @@ func _on_tap_enemy() -> void:
 	_flash_sprite(enemy_sprite)
 	_play_se(_se_attack)
 	GameState.add_coins(COIN_PER_TAP)
-	var levels_gained: int = GameState.add_xp(player_data.char_id, XP_PER_TAP)
+	var levels_gained: int = GameState.add_xp(XP_PER_TAP)
 	if levels_gained > 0:
-		_on_level_up()
+		_on_level_up(levels_gained)
 	_update_xp_ui()
 	_update_coin_ui()
 	_update_hp_labels()
 	if enemy_hp <= 0.0:
 		_on_enemy_form_defeated()
 
-# レベルアップ: 最大HP・攻撃力を再計算し、増えた分のHPを回復
-func _on_level_up() -> void:
+# レベルアップ: 最大HP・攻撃力を再計算し、増えた分のHPを回復。恩恵をポップアップで明示する
+func _on_level_up(levels_gained: int) -> void:
 	var old_max := player_max_hp
 	_refresh_player_stats()
 	player_hp = minf(player_hp + (player_max_hp - old_max), player_max_hp)
@@ -327,6 +328,31 @@ func _on_level_up() -> void:
 	player_level_label.modulate = Color(1.0, 0.9, 0.2)
 	var tween := create_tween()
 	tween.tween_property(player_level_label, "modulate", Color.WHITE, 0.6)
+	_show_level_up_popup(levels_gained)
+
+var _level_up_tween: Tween
+
+func _show_level_up_popup(levels_gained: int) -> void:
+	level_up_label.text = "レベルアップ！ Lv.%d\n最大HP +%d ／ 攻撃力 +%d" % [
+		GameState.player_level,
+		int(GameState.HP_PER_LEVEL) * levels_gained,
+		int(GameState.ATK_PER_LEVEL) * levels_gained,
+	]
+	if _level_up_tween != null and _level_up_tween.is_valid():
+		_level_up_tween.kill()
+	level_up_label.visible = true
+	level_up_label.pivot_offset = level_up_label.size / 2.0
+	level_up_label.modulate = Color(1, 1, 1, 0)
+	level_up_label.scale = Vector2(0.7, 0.7)
+	_level_up_tween = create_tween()
+	_level_up_tween.set_parallel(true)
+	_level_up_tween.tween_property(level_up_label, "modulate:a", 1.0, 0.15)
+	_level_up_tween.tween_property(level_up_label, "scale", Vector2.ONE, 0.25) \
+			.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	_level_up_tween.set_parallel(false)
+	_level_up_tween.tween_interval(1.2)
+	_level_up_tween.tween_property(level_up_label, "modulate:a", 0.0, 0.4)
+	_level_up_tween.tween_callback(func(): level_up_label.visible = false)
 
 func _execute_enemy_attack() -> void:
 	player_hp = maxf(player_hp - enemy_damage, 0.0)

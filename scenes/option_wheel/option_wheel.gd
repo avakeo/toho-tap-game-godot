@@ -156,7 +156,13 @@ func _rebuild_char_lists() -> void:
 	for c in _chars:
 		if c == current_player:
 			continue
-		var ob := _make_list_button(c.display_name + ("（対戦中）" if c == current_opponent else ""))
+		var label_text := c.display_name
+		# 現在の操作キャラでクリア済みの組み合わせが分かるようにする
+		if current_player != null and GameState.is_stage_cleared(current_player.char_id, c.char_id):
+			label_text += "　★クリア済"
+		if c == current_opponent:
+			label_text += "（対戦中）"
+		var ob := _make_list_button(label_text)
 		ob.disabled = c == current_opponent
 		ob.pressed.connect(_on_opponent_chosen.bind(c))
 		opponent_list.add_child(ob)
@@ -301,18 +307,50 @@ func _show_single_result(prize: Dictionary) -> void:
 		else:
 			result_label.text = "♪【BGM】%s\n（すでに持っている）" % bname
 
+# 未所持のキャラ/BGMから1つ確定で付与する(10連の確定枠用。すべて所持済みなら空)
+func _grant_unowned() -> Dictionary:
+	var pool: Array[Dictionary] = []
+	for c in _unowned_chars():
+		pool.append({"type": "char", "char": c, "new": true, "pity": false, "guaranteed": true})
+	for p in GameState.all_bgm_paths():
+		if not GameState.owned_bgm_paths.has(p):
+			pool.append({"type": "bgm", "path": p, "new": true, "pity": false, "guaranteed": true})
+	if pool.is_empty():
+		return {}
+	var prize: Dictionary = pool.pick_random()
+	if prize.type == "char":
+		GameState.owned_char_ids.append(prize.char.char_id)
+		GameState.gacha_pity_count = 0
+	else:
+		GameState.owned_bgm_paths.append(prize.path)
+	return prize
+
 func _on_roll_ten() -> void:
 	if not GameState.spend_coins(GACHA_COST_TEN):
 		result_label.text = "コインが足りない…（10連 %dコイン）" % GACHA_COST_TEN
 		return
+	var results: Array[Dictionary] = []
+	for i in 10:
+		results.append(_roll_prize())
+	# 10連は最低1つ未所持アイテム確定。新規が出なかったら最後の枠を差し替える
+	var has_new := false
+	for p in results:
+		if not p.is_empty() and p.new:
+			has_new = true
+			break
+	if not has_new:
+		var guaranteed := _grant_unowned()
+		if not guaranteed.is_empty():
+			results[results.size() - 1] = guaranteed
 	var lines: PackedStringArray = []
 	var last_new_char: CharacterData = null
-	for i in 10:
-		var prize := _roll_prize()
+	for prize in results:
 		if prize.is_empty():
 			continue
 		var mark := ""
-		if prize.pity:
+		if prize.get("guaranteed", false):
+			mark = "　★確定！"
+		elif prize.pity:
 			mark = "　★天井！"
 		elif prize.new:
 			mark = "　★NEW"
