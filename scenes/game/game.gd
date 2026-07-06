@@ -305,7 +305,8 @@ func _start_middle_talk() -> void:
 	var csv := "res://assets/dialogues/%s/%s_vs_%s_talk%d.csv" % [
 		player_data.char_id, player_data.char_id, current_enemy.char_id, current_phase
 	]
-	if _skip_talk_enabled() or not FileAccess.file_exists(csv):
+	# ファイルが無い場合もdialogue側の汎用会話フォールバックで表示する
+	if _skip_talk_enabled():
 		start_battle_phase()
 		return
 	_state = State.DIALOGUE

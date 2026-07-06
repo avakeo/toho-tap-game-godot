@@ -34,6 +34,9 @@ func start_dialogue(csv_path: String, left_char: CharacterData, right_char: Char
 	_right_char = right_char
 	_on_finished = on_finished
 	_lines = _parse_csv(csv_path)
+	# 会話が未収録(ファイル無し・プレースホルダーのみ)でも汎用会話でイベントを成立させる
+	if _lines.is_empty():
+		_lines = _generic_lines(csv_path)
 	_current_index = 0
 	left_char_image.texture = _left_char.get_tatie()
 	right_char_image.texture = _right_char.get_tatie()
@@ -74,6 +77,31 @@ func _parse_csv(path: String) -> Array[DialogueLine]:
 		var expression := cols[2].strip_edges() if cols.size() > 2 else ""
 		result.append(DialogueLine.new(speaker, text, expression))
 	return result
+
+# 汎用会話。種別(talk1/talk2/talk3/win/lose)はファイル名末尾から推定する
+func _generic_lines(csv_path: String) -> Array[DialogueLine]:
+	var kind := csv_path.get_file().get_basename().get_slice("_", 3)
+	var left_name := _left_char.display_name
+	var right_name := _right_char.display_name
+	var lines: Array[DialogueLine] = []
+	match kind:
+		"talk1":
+			lines.append(DialogueLine.new(_right_char.char_id, "あら、%sじゃない。私に何か用かしら？" % left_name, ""))
+			lines.append(DialogueLine.new(_left_char.char_id, "%s、あなたに勝負を申し込むわ！" % right_name, "shinken"))
+			lines.append(DialogueLine.new(_right_char.char_id, "面白いじゃない。かかってきなさい！", "shinken"))
+		"talk2":
+			lines.append(DialogueLine.new(_right_char.char_id, "やるわね…。でも、まだまだこれからよ！", "shinken"))
+			lines.append(DialogueLine.new(_left_char.char_id, "その程度じゃ、私は止められないわよ！", ""))
+		"talk3":
+			lines.append(DialogueLine.new(_right_char.char_id, "ここからが本気よ…！覚悟しなさい！", "shinken"))
+			lines.append(DialogueLine.new(_left_char.char_id, "望むところよ。決着をつけましょう！", "shinken"))
+		"win":
+			lines.append(DialogueLine.new(_left_char.char_id, "私の勝ちね。いい勝負だったわ、%s。" % right_name, "warai"))
+			lines.append(DialogueLine.new(_right_char.char_id, "参ったわ…。今日のところは私の負けね。", "ressei"))
+		"lose":
+			lines.append(DialogueLine.new(_right_char.char_id, "ふふ、私の勝ちね。出直してきなさい、%s。" % left_name, "warai"))
+			lines.append(DialogueLine.new(_left_char.char_id, "うう…次は絶対に負けないんだから…！", "ressei"))
+	return lines
 
 func _on_advance_pressed() -> void:
 	_current_index += 1
