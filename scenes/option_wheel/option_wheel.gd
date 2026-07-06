@@ -31,7 +31,8 @@ const JP_FONT := preload("res://assets/fonts/NotoSansJP-Regular.ttf")
 
 @onready var volume_panel: Panel = $VolumePanel
 @onready var volume_slider: HSlider = $VolumePanel/VolumeSlider
-@onready var skip_talk_check: CheckButton = $VolumePanel/SkipTalkCheck
+@onready var se_slider: HSlider = $VolumePanel/SESlider
+@onready var skip_talk_check: Button = $VolumePanel/SkipTalkCheck
 @onready var volume_close: Button = $VolumePanel/CloseButton
 
 @onready var gacha_panel: Panel = $GachaPanel
@@ -72,14 +73,18 @@ func _ready() -> void:
 	roll_button.text = "1回 %dコイン" % GACHA_COST_SINGLE
 	ten_roll_button.text = "10連 %dコイン" % GACHA_COST_TEN
 	volume_slider.value_changed.connect(_on_volume_changed)
+	volume_slider.drag_ended.connect(_on_volume_drag_ended)
+	se_slider.value_changed.connect(_on_se_volume_changed)
+	se_slider.drag_ended.connect(_on_volume_drag_ended)
 	bgm_keep_button.pressed.connect(_on_bgm_choice.bind(true))
 	bgm_reset_button.pressed.connect(_on_bgm_choice.bind(false))
 
-	var master := AudioServer.get_bus_index("Master")
-	volume_slider.set_value_no_signal(db_to_linear(AudioServer.get_bus_volume_db(master)) * 100.0)
+	volume_slider.set_value_no_signal(GameState.master_volume)
+	se_slider.set_value_no_signal(GameState.se_volume)
 
 	skip_talk_check.set_pressed_no_signal(GameState.skip_cleared_dialogue)
 	skip_talk_check.toggled.connect(_on_skip_talk_toggled)
+	_update_skip_talk_text(GameState.skip_cleared_dialogue)
 
 	_set_wheel_buttons_visible(false)
 
@@ -197,11 +202,22 @@ func _on_bgm_choice(keep_on_opponent_change: bool) -> void:
 func _on_skip_talk_toggled(pressed: bool) -> void:
 	GameState.skip_cleared_dialogue = pressed
 	GameState.save_progress()
+	_update_skip_talk_text(pressed)
+
+func _update_skip_talk_text(pressed: bool) -> void:
+	skip_talk_check.text = "クリア済み会話スキップ：%s" % ("ON" if pressed else "OFF")
 
 func _on_volume_changed(value: float) -> void:
-	var master := AudioServer.get_bus_index("Master")
-	AudioServer.set_bus_volume_db(master, linear_to_db(maxf(value / 100.0, 0.0001)))
-	AudioServer.set_bus_mute(master, value <= 0.0)
+	GameState.master_volume = value
+	GameState.apply_volumes()
+
+func _on_se_volume_changed(value: float) -> void:
+	GameState.se_volume = value
+	GameState.apply_volumes()
+
+# スライダー操作が終わったタイミングでのみセーブする(毎フレーム書き込まないため)
+func _on_volume_drag_ended(_changed: bool) -> void:
+	GameState.save_progress()
 
 func _on_gacha_button() -> void:
 	_update_gacha_ui()

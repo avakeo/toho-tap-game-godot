@@ -7,6 +7,8 @@ const GALLERY_SCENE := preload("res://scenes/gallery/gallery.tscn")
 
 @onready var background: TextureRect = $Background
 @onready var bgm_player: AudioStreamPlayer = $BGMPlayer
+@onready var se_player: AudioStreamPlayer = $SEPlayer
+@onready var bgm_title_label: Label = $BattleLayer/BGMTitleLabel
 @onready var battle_layer: CanvasLayer = $BattleLayer
 @onready var enemy_sprite: TextureRect = $BattleLayer/EnemySprite
 @onready var enemy_hp_bar: ProgressBar = $BattleLayer/EnemyHPBar
@@ -143,6 +145,7 @@ func apply_stage_visuals(enemy: CharacterData) -> void:
 		switch_bgm(enemy.stage_bgm)
 
 func switch_bgm(new_stream: AudioStream) -> void:
+	_update_bgm_title(new_stream)
 	var tween := create_tween()
 	tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
 	tween.tween_property(bgm_player, "volume_db", -80.0, 0.3)
@@ -151,6 +154,13 @@ func switch_bgm(new_stream: AudioStream) -> void:
 		bgm_player.volume_db = 0.0
 		bgm_player.play()
 	)
+
+# 再生中の曲名を画面左下に表示する
+func _update_bgm_title(stream: AudioStream) -> void:
+	if stream == null or stream.resource_path == "":
+		bgm_title_label.text = ""
+		return
+	bgm_title_label.text = "♪ %s" % stream.resource_path.get_file().get_basename()
 
 # 設定が有効で、かつステージ開始時点でクリア済みなら会話を飛ばす
 func _skip_talk_enabled() -> bool:

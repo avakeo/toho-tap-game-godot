@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=12 format=3]
 
 [ext_resource type="Script" path="res://scenes/game/game.gd" id="1_script"]
 [ext_resource type="PackedScene" path="res://scenes/dialogue/dialogue.tscn" id="2_dialogue"]
@@ -8,42 +8,76 @@
 [ext_resource type="PackedScene" path="res://scenes/option_wheel/option_wheel.tscn" id="6_wheel"]
 
 [sub_resource type="StyleBoxFlat" id="sb_hp_bg"]
-bg_color = Color(0.78, 0.13, 0.13, 1)
-border_width_left = 3
-border_width_top = 3
-border_width_right = 3
-border_width_bottom = 3
-border_color = Color(0.12, 0.12, 0.12, 1)
-corner_radius_top_left = 10
-corner_radius_top_right = 10
-corner_radius_bottom_right = 10
-corner_radius_bottom_left = 10
-
-[sub_resource type="StyleBoxFlat" id="sb_hp_fill"]
-bg_color = Color(0.25, 0.85, 0.3, 1)
-corner_radius_top_left = 10
-corner_radius_top_right = 10
-corner_radius_bottom_right = 10
-corner_radius_bottom_left = 10
-
-[sub_resource type="StyleBoxFlat" id="sb_xp_bg"]
-bg_color = Color(0.15, 0.15, 0.2, 1)
+bg_color = Color(0.05, 0.06, 0.11, 0.88)
 border_width_left = 2
 border_width_top = 2
 border_width_right = 2
 border_width_bottom = 2
-border_color = Color(0.12, 0.12, 0.12, 1)
-corner_radius_top_left = 6
-corner_radius_top_right = 6
-corner_radius_bottom_right = 6
-corner_radius_bottom_left = 6
+border_color = Color(1, 1, 1, 0.38)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
+shadow_color = Color(0, 0, 0, 0.45)
+shadow_size = 6
+skew = Vector2(0.25, 0)
+
+[sub_resource type="StyleBoxFlat" id="sb_hp_fill"]
+bg_color = Color(0.15, 0.9, 0.45, 1)
+border_width_bottom = 4
+border_color = Color(0.05, 0.5, 0.22, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+expand_margin_left = -2.0
+expand_margin_top = -2.0
+expand_margin_right = -2.0
+expand_margin_bottom = -2.0
+skew = Vector2(0.25, 0)
+
+[sub_resource type="StyleBoxFlat" id="sb_enemy_hp_fill"]
+bg_color = Color(1, 0.3, 0.38, 1)
+border_width_bottom = 4
+border_color = Color(0.6, 0.08, 0.15, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+expand_margin_left = -2.0
+expand_margin_top = -2.0
+expand_margin_right = -2.0
+expand_margin_bottom = -2.0
+skew = Vector2(0.25, 0)
+
+[sub_resource type="StyleBoxFlat" id="sb_xp_bg"]
+bg_color = Color(0.05, 0.06, 0.11, 0.88)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.55, 0.75, 1, 0.4)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+shadow_color = Color(0, 0, 0, 0.4)
+shadow_size = 4
+skew = Vector2(0.25, 0)
 
 [sub_resource type="StyleBoxFlat" id="sb_xp_fill"]
-bg_color = Color(0.3, 0.6, 1.0, 1)
-corner_radius_top_left = 6
-corner_radius_top_right = 6
-corner_radius_bottom_right = 6
-corner_radius_bottom_left = 6
+bg_color = Color(0.35, 0.7, 1, 1)
+border_width_bottom = 3
+border_color = Color(0.12, 0.3, 0.65, 1)
+corner_radius_top_left = 7
+corner_radius_top_right = 7
+corner_radius_bottom_right = 7
+corner_radius_bottom_left = 7
+expand_margin_left = -2.0
+expand_margin_top = -2.0
+expand_margin_right = -2.0
+expand_margin_bottom = -2.0
+skew = Vector2(0.25, 0)
 
 [node name="Game" type="Node"]
 script = ExtResource("1_script")
@@ -55,6 +89,10 @@ expand_mode = 3
 stretch_mode = 6
 
 [node name="BGMPlayer" type="AudioStreamPlayer" parent="."]
+process_mode = 3
+autoplay = false
+
+[node name="SEPlayer" type="AudioStreamPlayer" parent="."]
 process_mode = 3
 autoplay = false
 
@@ -85,7 +123,7 @@ anchor_top = 0.067
 anchor_right = 0.963
 anchor_bottom = 0.132
 theme_override_styles/background = SubResource("sb_hp_bg")
-theme_override_styles/fill = SubResource("sb_hp_fill")
+theme_override_styles/fill = SubResource("sb_enemy_hp_fill")
 show_percentage = false
 
 [node name="PlayerSDSprite" type="TextureRect" parent="BattleLayer"]
@@ -203,6 +241,20 @@ theme_override_colors/font_outline_color = Color(0.1, 0.1, 0.1, 1)
 theme_override_constants/outline_size = 5
 vertical_alignment = 1
 text = "0 / 0"
+
+[node name="BGMTitleLabel" type="Label" parent="BattleLayer"]
+anchor_left = 0.015
+anchor_top = 0.972
+anchor_right = 0.72
+anchor_bottom = 0.998
+theme_override_fonts/font = ExtResource("5_font")
+theme_override_font_sizes/font_size = 22
+theme_override_colors/font_color = Color(0.85, 0.9, 1, 0.9)
+theme_override_colors/font_outline_color = Color(0.05, 0.05, 0.1, 1)
+theme_override_constants/outline_size = 6
+text_overrun_behavior = 3
+vertical_alignment = 1
+text = ""
 
 [node name="DialogueLayer" parent="." instance=ExtResource("2_dialogue")]
 
