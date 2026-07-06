@@ -8,9 +8,9 @@ signal next_requested
 func _ready() -> void:
 	next_button.pressed.connect(_on_next_button_pressed)
 
-func show_result(is_final: bool = false) -> void:
-	result_label.text = "全ステージクリア！" if is_final else "勝利！"
-	next_button.visible = not is_final
+func show_result() -> void:
+	result_label.text = "勝利！"
+	next_button.visible = true
 	visible = true
 
 func _on_next_button_pressed() -> void:

@@ -88,7 +88,27 @@ func _load_characters() -> void:
 		push_error("No character data found")
 		return
 	player_data = all_chars[0]
+	_restore_session()
 	_rebuild_enemy_list()
+	var enemy_idx := _find_enemy_index(GameState.session_enemy_id)
+	if enemy_idx != -1:
+		current_enemy_index = enemy_idx
+
+# 前回セッションの操作キャラを復元(所持していることが条件)
+func _restore_session() -> void:
+	var pid := GameState.session_player_id
+	if pid == "" or not GameState.owned_char_ids.has(pid):
+		return
+	for c in all_chars:
+		if c.char_id == pid:
+			player_data = c
+			return
+
+func _find_enemy_index(enemy_id: String) -> int:
+	for i in enemy_list.size():
+		if enemy_list[i].char_id == enemy_id:
+			return i
+	return -1
 
 func _rebuild_enemy_list() -> void:
 	enemy_list.clear()
@@ -97,10 +117,11 @@ func _rebuild_enemy_list() -> void:
 			enemy_list.append(c)
 
 func start_stage() -> void:
+	# 最後の敵を倒したら最初の敵に戻って周回する
 	if current_enemy_index >= enemy_list.size():
-		push_warning("All enemies defeated — game complete")
-		return
+		current_enemy_index = 0
 	current_enemy = enemy_list[current_enemy_index]
+	GameState.set_session(player_data.char_id, current_enemy.char_id)
 	current_phase = 1
 	max_phase = current_enemy.battle_forms.size()
 	_stage_was_cleared = GameState.is_stage_cleared(player_data.char_id, current_enemy.char_id)
@@ -299,11 +320,11 @@ func _start_win_talk() -> void:
 
 func _show_result() -> void:
 	_state = State.RESULT
-	var is_final := current_enemy_index >= enemy_list.size() - 1
-	result_layer.show_result(is_final)
+	result_layer.show_result()
 
 func _on_next_enemy() -> void:
-	current_enemy_index += 1
+	# 一番下の敵を倒した後は最初の敵に戻る(周回)
+	current_enemy_index = (current_enemy_index + 1) % enemy_list.size()
 	start_stage()
 
 func _on_player_death() -> void:
