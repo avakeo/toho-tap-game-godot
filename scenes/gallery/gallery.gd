@@ -86,7 +86,8 @@ func _make_list_row(player: String, enemy: String) -> Button:
 	if not cleared:
 		hbox.modulate = Color(1, 1, 1, 0.5)
 
-	var left_sd := _make_sd_icon(chars[player].sd_sprite, false)
+	# 両側のSDが行の中央(vs)を向くよう、素材の向きフラグを加味して反転する
+	var left_sd := _make_sd_icon(chars[player].sd_sprite, chars[player].sd_faces_left)
 	var label_text := "%s vs %s" % [chars[player].display_name, chars[enemy].display_name]
 	if not cleared:
 		label_text += "\n（未クリア）"
@@ -98,8 +99,7 @@ func _make_list_row(player: String, enemy: String) -> Button:
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	# 右側のSDは左右反転して向かい合わせにする
-	var right_sd := _make_sd_icon(chars[enemy].sd_sprite, true)
+	var right_sd := _make_sd_icon(chars[enemy].sd_sprite, not chars[enemy].sd_faces_left)
 
 	hbox.add_child(left_sd)
 	hbox.add_child(label)
