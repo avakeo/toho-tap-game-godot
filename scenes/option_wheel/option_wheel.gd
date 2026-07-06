@@ -46,7 +46,7 @@ const JP_FONT := preload("res://assets/fonts/ZenMaruGothic-Medium.ttf")
 
 # ガチャ設定(ここの定数で調整する)
 const GACHA_COST_SINGLE := 100    # 1回の消費コイン
-const GACHA_COST_TEN := 900       # 10連の消費コイン(1回分お得)
+const GACHA_COST_TEN := 1000      # 10連の消費コイン(割引なし)
 const GACHA_PITY_COUNT := 30      # 天井: この回数引くと未所持の自キャラ確定
 
 var _chars: Array[CharacterData] = []
