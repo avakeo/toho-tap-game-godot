@@ -268,7 +268,7 @@ func _load_se() -> void:
 
 func _try_load_se(base_name: String) -> AudioStream:
 	for ext in ["ogg", "mp3", "wav"]:
-		var path := SE_DIR + base_name + "." + ext
+		var path: String = SE_DIR + base_name + "." + ext
 		if ResourceLoader.exists(path):
 			return load(path)
 	return null
