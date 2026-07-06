@@ -8,7 +8,8 @@ const GALLERY_SCENE := preload("res://scenes/gallery/gallery.tscn")
 @onready var background: TextureRect = $Background
 @onready var bgm_player: AudioStreamPlayer = $BGMPlayer
 @onready var se_player: AudioStreamPlayer = $SEPlayer
-@onready var bgm_title_label: Label = $BattleLayer/BGMTitleLabel
+@onready var bgm_title_box: Control = $BattleLayer/BGMTitleBox
+@onready var bgm_title_label: Label = $BattleLayer/BGMTitleBox/BGMTitleLabel
 @onready var battle_layer: CanvasLayer = $BattleLayer
 @onready var enemy_sprite: TextureRect = $BattleLayer/EnemySprite
 @onready var enemy_hp_bar: ProgressBar = $BattleLayer/EnemyHPBar
@@ -170,12 +171,31 @@ func switch_bgm(new_stream: AudioStream) -> void:
 		bgm_player.play()
 	)
 
-# 再生中の曲名を画面左下に表示する
+# 再生中の曲名を画面左下にマーキー(右から左へ流れる)表示する
+var _bgm_marquee_tween: Tween
+const BGM_MARQUEE_SPEED := 80.0  # スクロール速度(px/秒)
+
 func _update_bgm_title(stream: AudioStream) -> void:
 	if stream == null or stream.resource_path == "":
 		bgm_title_label.text = ""
+		if _bgm_marquee_tween != null and _bgm_marquee_tween.is_valid():
+			_bgm_marquee_tween.kill()
 		return
 	bgm_title_label.text = "♪ %s" % stream.resource_path.get_file().get_basename()
+	_restart_bgm_marquee.call_deferred()
+
+func _restart_bgm_marquee() -> void:
+	if _bgm_marquee_tween != null and _bgm_marquee_tween.is_valid():
+		_bgm_marquee_tween.kill()
+	bgm_title_label.reset_size()
+	var box_w := bgm_title_box.size.x
+	var text_w := bgm_title_label.size.x
+	bgm_title_label.position.y = (bgm_title_box.size.y - bgm_title_label.size.y) / 2.0
+	# 右端から画面外左まで流してループ
+	_bgm_marquee_tween = create_tween().set_loops()
+	_bgm_marquee_tween.tween_callback(func(): bgm_title_label.position.x = box_w)
+	_bgm_marquee_tween.tween_property(bgm_title_label, "position:x", -text_w,
+			(box_w + text_w) / BGM_MARQUEE_SPEED)
 
 # 設定が有効で、かつステージ開始時点でクリア済みなら会話を飛ばす
 func _skip_talk_enabled() -> bool:
