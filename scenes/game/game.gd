@@ -40,6 +40,7 @@ var max_phase: int = 3
 var enemy_hp: float
 var enemy_max_hp: float
 var enemy_damage: float
+var enemy_level: int = 1
 var player_hp: float
 var player_max_hp: float
 var tap_damage: float
@@ -51,6 +52,10 @@ const ENEMY_DAMAGE: float = 10.0
 const XP_PER_TAP: int = 1
 const ENEMY_HP_GROWTH_PER_STAGE: float = 0.3
 const ENEMY_ATK_GROWTH_PER_STAGE: float = 0.2
+# 敵レベル: プレイヤーのレベルに追従して強くなる(戦闘を拮抗させる)
+const ENEMY_LEVEL_PER_STAGE: int = 2      # ステージが進むごとの敵レベル加算
+const ENEMY_HP_PER_LEVEL: float = 20.0    # 敵レベル1あたりのHP増加
+const ENEMY_ATK_PER_LEVEL: float = 2.0    # 敵レベル1あたりの攻撃力増加
 const COIN_PER_TAP: int = 1
 const COIN_PER_FORM: int = 10
 const COIN_STAGE_CLEAR_BONUS: int = 30
@@ -223,11 +228,14 @@ func _refresh_player_stats() -> void:
 	player_max_hp = player_data.max_hp + GameState.hp_bonus(player_data.char_id)
 	tap_damage = TAP_DAMAGE + GameState.atk_bonus(player_data.char_id)
 
-# ステージ(倒した敵の数)に応じて敵のHP・攻撃力を強化
+# 敵レベル(プレイヤーレベル+ステージ加算)とステージ係数で敵のHP・攻撃力を強化する
 func _refresh_enemy_stats() -> void:
 	var stage := float(current_enemy_index)
-	enemy_max_hp = current_enemy.max_hp * (1.0 + ENEMY_HP_GROWTH_PER_STAGE * stage)
-	enemy_damage = ENEMY_DAMAGE * (1.0 + ENEMY_ATK_GROWTH_PER_STAGE * stage)
+	enemy_level = GameState.get_char_level(player_data.char_id) + current_enemy_index * ENEMY_LEVEL_PER_STAGE
+	enemy_max_hp = current_enemy.max_hp * (1.0 + ENEMY_HP_GROWTH_PER_STAGE * stage) \
+			+ ENEMY_HP_PER_LEVEL * float(enemy_level - 1)
+	enemy_damage = ENEMY_DAMAGE * (1.0 + ENEMY_ATK_GROWTH_PER_STAGE * stage) \
+			+ ENEMY_ATK_PER_LEVEL * float(enemy_level - 1)
 
 func _update_xp_ui() -> void:
 	var lvl: int = GameState.get_char_level(player_data.char_id)
@@ -241,7 +249,7 @@ func _update_xp_ui() -> void:
 func _update_battle_hud() -> void:
 	stage_label.text = "Stage %d" % (current_enemy_index + 1)
 	phase_label.text = "Phase %d/%d" % [current_phase, max_phase]
-	enemy_hp_label.text = current_enemy.display_name
+	enemy_hp_label.text = "%s Lv.%d" % [current_enemy.display_name, enemy_level]
 	player_hp_label.text = player_data.display_name
 	_update_coin_ui()
 	_update_hp_labels()
