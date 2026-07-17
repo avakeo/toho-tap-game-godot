@@ -36,10 +36,54 @@ var se_volume: float = 100.0
 
 const SE_BUS_NAME := "SE"
 
+# 操作SE(ボタン押下時)。ファイルが無ければ鳴らさない
+const UI_SE_PATH_CANDIDATES := [
+	"res://assets/sounds/se/ui.ogg",
+	"res://assets/sounds/se/ui.mp3",
+	"res://assets/sounds/se/ui.wav",
+]
+# UI操作SEを鳴らさないボタンのグループ名(例: 攻撃タップは専用SEがあるため除外)
+const NO_UI_SE_GROUP := "no_ui_se"
+var _ui_se_stream: AudioStream
+var _ui_se_player: AudioStreamPlayer
+
 func _ready() -> void:
 	_ensure_se_bus()
 	load_progress()
 	apply_volumes()
+	_setup_ui_se()
+
+# 操作SEの読み込みと、全シーンのボタン押下への自動配線を用意する
+func _setup_ui_se() -> void:
+	for path in UI_SE_PATH_CANDIDATES:
+		if ResourceLoader.exists(path):
+			_ui_se_stream = load(path)
+			break
+	_ui_se_player = AudioStreamPlayer.new()
+	_ui_se_player.bus = SE_BUS_NAME
+	add_child(_ui_se_player)
+	# 既存・今後生成される全ボタンの pressed に操作SEをつなぐ
+	get_tree().node_added.connect(_on_node_added)
+	_wire_existing_buttons(get_tree().root)
+
+func _wire_existing_buttons(node: Node) -> void:
+	_on_node_added(node)
+	for child in node.get_children():
+		_wire_existing_buttons(child)
+
+func _on_node_added(node: Node) -> void:
+	if node is BaseButton:
+		var btn: BaseButton = node
+		if btn.is_in_group(NO_UI_SE_GROUP):
+			return
+		if not btn.pressed.is_connected(play_ui_se):
+			btn.pressed.connect(play_ui_se)
+
+func play_ui_se() -> void:
+	if _ui_se_stream == null or _ui_se_player == null:
+		return
+	_ui_se_player.stream = _ui_se_stream
+	_ui_se_player.play()
 
 # SE専用バスが無ければ作る(効果音の音量を個別調整するため)
 func _ensure_se_bus() -> void:
