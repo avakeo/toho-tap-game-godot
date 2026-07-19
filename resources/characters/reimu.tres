@@ -26,6 +26,7 @@ tatie_expressions = {
 "shinken": ExtResource("10_shinken"),
 "warai": ExtResource("13_warai")
 }
+tatie_eye_ratio = 0.29
 sd_sprite = ExtResource("9_sd")
 sd_faces_left = true
 defeated_sprite = ExtResource("6_defeated")

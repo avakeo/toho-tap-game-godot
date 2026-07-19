@@ -23,6 +23,13 @@ var _left_char: CharacterData
 var _right_char: CharacterData
 var _on_finished: Callable
 
+# 立ち絵レイアウト。キャンバス幅がキャラごとに違っても表示高さを一律にし、
+# tatie_eye_ratio で目線を共通ラインに揃える
+const TATIE_HEIGHT_RATIO := 0.605   # 表示高さ(画面高比)。旧アンカー 0.18〜0.785 と同じ
+const TATIE_EYE_LINE_RATIO := 0.38  # 目線ライン(画面高比)
+const TATIE_LEFT_CENTER_X := 0.25   # 左キャラの中心(画面幅比)
+const TATIE_RIGHT_CENTER_X := 0.75  # 右キャラの中心(画面幅比)
+
 func _ready() -> void:
 	advance_button.pressed.connect(_on_advance_pressed)
 	var blink := create_tween().set_loops()
@@ -38,8 +45,8 @@ func start_dialogue(csv_path: String, left_char: CharacterData, right_char: Char
 	if _lines.is_empty():
 		_lines = _generic_lines(csv_path)
 	_current_index = 0
-	left_char_image.texture = _left_char.get_tatie()
-	right_char_image.texture = _right_char.get_tatie()
+	_set_tatie(left_char_image, _left_char)
+	_set_tatie(right_char_image, _right_char)
 	visible = true
 	if _lines.is_empty():
 		_finish()
@@ -123,9 +130,22 @@ func _update_ui() -> void:
 	_update_focus(dl.speaker)
 	# 話者側の立ち絵を表情差分に切り替える
 	if dl.speaker == _left_char.char_id or dl.speaker == _left_char.display_name:
-		left_char_image.texture = _left_char.get_tatie(dl.expression)
+		_set_tatie(left_char_image, _left_char, dl.expression)
 	else:
-		right_char_image.texture = _right_char.get_tatie(dl.expression)
+		_set_tatie(right_char_image, _right_char, dl.expression)
+
+# 立ち絵をセットし、表示高さを一律にしたうえで目線ラインに縦位置を合わせる
+func _set_tatie(rect: TextureRect, chara: CharacterData, expression: String = "") -> void:
+	var tex := chara.get_tatie(expression)
+	rect.texture = tex
+	if tex == null:
+		return
+	var vp := rect.get_viewport_rect().size
+	var h := vp.y * TATIE_HEIGHT_RATIO
+	var w := h * float(tex.get_width()) / float(tex.get_height())
+	var center_x := vp.x * (TATIE_LEFT_CENTER_X if rect == left_char_image else TATIE_RIGHT_CENTER_X)
+	rect.size = Vector2(w, h)
+	rect.position = Vector2(center_x - w * 0.5, vp.y * TATIE_EYE_LINE_RATIO - chara.tatie_eye_ratio * h)
 
 func _resolve_display_name(speaker: String) -> String:
 	if speaker == _left_char.char_id or speaker == _left_char.display_name:

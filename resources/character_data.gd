@@ -7,6 +7,8 @@ extends Resource
 @export var tatie_sprite: Texture2D
 # 表情名("shinken"/"ressei"/"odoroki"/"warai") -> 立ち絵差分
 @export var tatie_expressions: Dictionary = {}
+# 立ち絵画像の高さに対する目の中心位置の割合。対話パートで全員の目線を揃えるのに使う
+@export var tatie_eye_ratio: float = 0.33
 @export var sd_sprite: Texture2D
 # SD絵が左向きの場合true。バトルでは右向きに統一するため反転して表示する
 @export var sd_faces_left: bool = false
