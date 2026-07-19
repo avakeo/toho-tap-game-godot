@@ -1,0 +1,112 @@
+extends Node
+# 動画リワード広告の汎用マネージャ(autoload: AdManager)
+# 用途(ガチャ/Lv upなど)は placement 文字列で区別するだけで、呼び出し側は
+#   AdManager.show_rewarded("gacha", func(success: bool) -> void: ...)
+# と書けばよい。ロード・視聴後の再ロード・失敗時のリトライは内部で行う。
+# エディタやPC実行では AdMob プラグインが存在しないため、擬似視聴モードで
+# 即座に成功を返す(ゲームロジック側の開発・検証用)。
+
+# 報酬が確定した(=最後まで視聴した)ときに placement 付きで通知
+signal rewarded(placement: String)
+# 広告の準備状態が変わったときに通知(ボタンの活性化などに使う)
+signal availability_changed(available: bool)
+
+# Google公式のテスト用リワード広告ユニットID。リリース時に自前のIDへ差し替える。
+# placementごとにユニットIDを分けたくなったら値を Dictionary にして拡張する。
+const AD_UNIT_IDS := {
+	"Android": "ca-app-pub-3940256099942544/5224354917",
+	"iOS": "ca-app-pub-3940256099942544/1712485313",
+}
+const MAX_LOAD_RETRY := 5
+# 擬似視聴モードで成功を返すまでの秒数
+const FAKE_WATCH_SECONDS := 0.5
+
+var _rewarded_ad: RewardedAd
+var _is_loading := false
+var _retry_count := 0
+# ネイティブプラグインが使える環境か(Android/iOSの実機ビルドのみtrue)
+var _plugin_available := false
+# プラグインが無い環境で擬似視聴を許可するか(エディタ・PCのみ)
+var _fake_mode := false
+
+func _ready() -> void:
+	_plugin_available = Engine.has_singleton("PoingGodotAdMob")
+	if _plugin_available:
+		MobileAds.initialize()
+		_load_ad()
+	else:
+		# 実機以外は擬似モード。モバイル実機でプラグインが無い場合は
+		# 導入ミスに気付けるよう擬似モードにはしない(常に利用不可)
+		_fake_mode = OS.has_feature("editor") or OS.get_name() in ["Windows", "macOS", "Linux"]
+
+# 広告を表示できる状態か。リワードボタンの表示/活性の判定に使う
+func is_ready() -> bool:
+	return _fake_mode or _rewarded_ad != null
+
+# 動画リワードを表示する。視聴完了で on_result.call(true)、
+# 途中で閉じた・表示に失敗した場合は on_result.call(false) が呼ばれる。
+func show_rewarded(placement: String, on_result: Callable = Callable()) -> void:
+	if _fake_mode:
+		await get_tree().create_timer(FAKE_WATCH_SECONDS).timeout
+		print("AdManager: 擬似リワード視聴完了 placement=", placement)
+		_finish(placement, true, on_result)
+		return
+	if _rewarded_ad == null:
+		_finish(placement, false, on_result)
+		_load_ad()
+		return
+
+	var ad := _rewarded_ad
+	_rewarded_ad = null
+	availability_changed.emit(false)
+	var earned := false
+
+	var reward_listener := OnUserEarnedRewardListener.new()
+	reward_listener.on_user_earned_reward = func(_item: RewardedItem) -> void:
+		earned = true
+
+	ad.full_screen_content_callback.on_ad_dismissed_full_screen_content = func() -> void:
+		ad.destroy()
+		_finish(placement, earned, on_result)
+		_load_ad()
+	ad.full_screen_content_callback.on_ad_failed_to_show_full_screen_content = func(error: AdError) -> void:
+		push_warning("AdManager: 表示失敗 " + str(error.message))
+		ad.destroy()
+		_finish(placement, false, on_result)
+		_load_ad()
+
+	ad.show(reward_listener)
+
+func _finish(placement: String, success: bool, on_result: Callable) -> void:
+	if success:
+		rewarded.emit(placement)
+	if on_result.is_valid():
+		on_result.call(success)
+
+func _load_ad() -> void:
+	if _is_loading or _rewarded_ad != null:
+		return
+	if not AD_UNIT_IDS.has(OS.get_name()):
+		return
+	_is_loading = true
+
+	var callback := RewardedAdLoadCallback.new()
+	callback.on_ad_loaded = func(ad: RewardedAd) -> void:
+		_is_loading = false
+		_retry_count = 0
+		_rewarded_ad = ad
+		availability_changed.emit(true)
+	callback.on_ad_failed_to_load = func(error: LoadAdError) -> void:
+		_is_loading = false
+		push_warning("AdManager: ロード失敗 " + str(error.message))
+		_retry_load()
+
+	RewardedAdLoader.new().load(AD_UNIT_IDS[OS.get_name()], AdRequest.new(), callback)
+
+# ロード失敗時は指数バックオフ(2,4,8...秒)で再試行する
+func _retry_load() -> void:
+	if _retry_count >= MAX_LOAD_RETRY:
+		return
+	_retry_count += 1
+	await get_tree().create_timer(pow(2.0, _retry_count)).timeout
+	_load_ad()

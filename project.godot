@@ -21,6 +21,11 @@ config/features=PackedStringArray("4.7", "Mobile")
 [autoload]
 
 GameState="*res://scripts/game_state.gd"
+AdManager="*res://scripts/ad_manager.gd"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/admob/plugin.cfg")
 
 [display]
 
