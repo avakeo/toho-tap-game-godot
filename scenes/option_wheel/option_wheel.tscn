@@ -359,41 +359,6 @@ theme_override_fonts/font = ExtResource("2_font")
 theme_override_font_sizes/font_size = 40
 text = "閉じる"
 
-[node name="GachaVideoOverlay" type="Button" parent="."]
-visible = false
-anchor_right = 1.0
-anchor_bottom = 1.0
-focus_mode = 0
-flat = true
-theme_override_styles/normal = SubResource("sb_empty")
-theme_override_styles/hover = SubResource("sb_empty")
-theme_override_styles/pressed = SubResource("sb_empty")
-theme_override_styles/focus = SubResource("sb_empty")
-
-[node name="Background" type="ColorRect" parent="GachaVideoOverlay"]
-mouse_filter = 2
-anchor_right = 1.0
-anchor_bottom = 1.0
-color = Color(0, 0, 0, 1)
-
-[node name="VideoStreamPlayer" type="VideoStreamPlayer" parent="GachaVideoOverlay"]
-mouse_filter = 2
-anchor_right = 1.0
-anchor_bottom = 1.0
-stream = ExtResource("3_gacha_video")
-
-[node name="SkipHint" type="Label" parent="GachaVideoOverlay"]
-mouse_filter = 2
-anchor_top = 0.92
-anchor_right = 1.0
-anchor_bottom = 1.0
-theme_override_fonts/font = ExtResource("2_font")
-theme_override_font_sizes/font_size = 28
-theme_override_colors/font_color = Color(1, 1, 1, 0.8)
-horizontal_alignment = 1
-vertical_alignment = 1
-text = "タップでスキップ"
-
 [node name="GachaPanel" type="Panel" parent="."]
 visible = false
 anchor_left = 0.05
@@ -472,3 +437,38 @@ anchor_bottom = 0.97
 theme_override_fonts/font = ExtResource("2_font")
 theme_override_font_sizes/font_size = 40
 text = "閉じる"
+
+[node name="GachaVideoOverlay" type="Button" parent="."]
+visible = false
+anchor_right = 1.0
+anchor_bottom = 1.0
+focus_mode = 0
+flat = true
+theme_override_styles/normal = SubResource("sb_empty")
+theme_override_styles/hover = SubResource("sb_empty")
+theme_override_styles/pressed = SubResource("sb_empty")
+theme_override_styles/focus = SubResource("sb_empty")
+
+[node name="Background" type="ColorRect" parent="GachaVideoOverlay"]
+mouse_filter = 2
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0, 1)
+
+[node name="VideoStreamPlayer" type="VideoStreamPlayer" parent="GachaVideoOverlay"]
+mouse_filter = 2
+anchor_right = 1.0
+anchor_bottom = 1.0
+stream = ExtResource("3_gacha_video")
+
+[node name="SkipHint" type="Label" parent="GachaVideoOverlay"]
+mouse_filter = 2
+anchor_top = 0.92
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 28
+theme_override_colors/font_color = Color(1, 1, 1, 0.8)
+horizontal_alignment = 1
+vertical_alignment = 1
+text = "タップでスキップ"

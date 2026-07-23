@@ -300,8 +300,11 @@ func _on_roll() -> void:
 		_show_single_result(prize))
 
 # ガチャ演出動画を再生し、終了(再生完了 or タップスキップ)後に on_done を呼ぶ
+# 演出中はガチャパネル/クイックメニューを閉じ、動画だけが画面いっぱいに見えるようにする
 func _play_gacha_video(on_done: Callable) -> void:
 	_gacha_video_on_done = on_done
+	gacha_panel.hide()
+	_set_wheel_buttons_visible(false)
 	gacha_video_overlay.show()
 	gacha_video_player.play()
 
@@ -310,6 +313,8 @@ func _finish_gacha_video() -> void:
 		return
 	gacha_video_player.stop()
 	gacha_video_overlay.hide()
+	gacha_panel.show()
+	_set_wheel_buttons_visible(true)
 	var on_done := _gacha_video_on_done
 	_gacha_video_on_done = Callable()
 	if on_done.is_valid():
