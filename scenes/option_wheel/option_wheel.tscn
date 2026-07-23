@@ -459,6 +459,7 @@ color = Color(0, 0, 0, 1)
 mouse_filter = 2
 anchor_right = 1.0
 anchor_bottom = 1.0
+expand = true
 stream = ExtResource("3_gacha_video")
 
 [node name="SkipHint" type="Label" parent="GachaVideoOverlay"]
