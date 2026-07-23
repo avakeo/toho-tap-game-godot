@@ -44,6 +44,9 @@ const JP_FONT := preload("res://assets/fonts/ZenMaruGothic-Medium.ttf")
 @onready var result_label: Label = $GachaPanel/ResultLabel
 @onready var gacha_close: Button = $GachaPanel/CloseButton
 
+@onready var gacha_video_overlay: Button = $GachaVideoOverlay
+@onready var gacha_video_player: VideoStreamPlayer = $GachaVideoOverlay/VideoStreamPlayer
+
 # ガチャ設定(ここの定数で調整する)
 const GACHA_COST_SINGLE := 100    # 1回の消費コイン
 const GACHA_COST_TEN := 1000      # 10連の消費コイン(割引なし)
@@ -55,6 +58,9 @@ var _pending_bgm_path := ""
 
 var current_player: CharacterData
 var current_opponent: CharacterData
+
+# ガチャ演出動画。再生完了 or タップスキップで _gacha_video_on_done を呼ぶ
+var _gacha_video_on_done: Callable
 
 func _ready() -> void:
 	toggle_button.pressed.connect(_on_toggle)
@@ -78,6 +84,8 @@ func _ready() -> void:
 	se_slider.drag_ended.connect(_on_volume_drag_ended)
 	bgm_keep_button.pressed.connect(_on_bgm_choice.bind(true))
 	bgm_reset_button.pressed.connect(_on_bgm_choice.bind(false))
+	gacha_video_overlay.pressed.connect(_finish_gacha_video)
+	gacha_video_player.finished.connect(_finish_gacha_video)
 
 	volume_slider.set_value_no_signal(GameState.master_volume)
 	se_slider.set_value_no_signal(GameState.se_volume)
@@ -96,6 +104,10 @@ func close_wheel() -> void:
 	_set_wheel_buttons_visible(false)
 	for p in [char_panel, bgm_panel, volume_panel, gacha_panel]:
 		p.hide()
+	if gacha_video_overlay.visible:
+		gacha_video_player.stop()
+		gacha_video_overlay.hide()
+		_gacha_video_on_done = Callable()
 	get_tree().paused = false
 
 func _on_toggle() -> void:
@@ -282,9 +294,26 @@ func _on_roll() -> void:
 		return
 	var prize := _roll_prize()
 	GameState.save_progress()
-	_show_single_result(prize)
 	_update_gacha_ui()
 	coins_changed.emit()
+	_play_gacha_video(func() -> void:
+		_show_single_result(prize))
+
+# ガチャ演出動画を再生し、終了(再生完了 or タップスキップ)後に on_done を呼ぶ
+func _play_gacha_video(on_done: Callable) -> void:
+	_gacha_video_on_done = on_done
+	gacha_video_overlay.show()
+	gacha_video_player.play()
+
+func _finish_gacha_video() -> void:
+	if not gacha_video_overlay.visible:
+		return
+	gacha_video_player.stop()
+	gacha_video_overlay.hide()
+	var on_done := _gacha_video_on_done
+	_gacha_video_on_done = Callable()
+	if on_done.is_valid():
+		on_done.call()
 
 func _show_single_result(prize: Dictionary) -> void:
 	if prize.is_empty():
@@ -362,8 +391,9 @@ func _on_roll_ten() -> void:
 		else:
 			lines.append("♪ %s%s" % [prize.path.get_file().get_basename(), mark])
 	GameState.save_progress()
-	result_image.texture = last_new_char.tatie_sprite if last_new_char else null
-	result_label.add_theme_font_size_override("font_size", 24)
-	result_label.text = "\n".join(lines)
 	_update_gacha_ui()
 	coins_changed.emit()
+	_play_gacha_video(func() -> void:
+		result_image.texture = last_new_char.tatie_sprite if last_new_char else null
+		result_label.add_theme_font_size_override("font_size", 24)
+		result_label.text = "\n".join(lines))
