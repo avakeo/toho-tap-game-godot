@@ -8,6 +8,7 @@ signal title_requested
 signal coins_changed
 
 const JP_FONT := preload("res://assets/fonts/ZenMaruGothic-Medium.ttf")
+const BGM_DISC_ICON := preload("res://assets/sprites/ui/bgm_disc.svg")
 
 @onready var toggle_button: Button = $ToggleButton
 @onready var char_button: Button = $CharButton
@@ -334,7 +335,7 @@ func _show_single_result(prize: Dictionary) -> void:
 		else:
 			result_label.text = "【キャラ】%s\n（すでに持っている）" % c.display_name
 	else:
-		result_image.texture = null
+		result_image.texture = BGM_DISC_ICON
 		var bname: String = prize.path.get_file().get_basename()
 		if prize.new:
 			result_label.text = "♪【BGM】%s を手に入れた！\nBGM変更で聴けるよ" % bname
@@ -378,6 +379,7 @@ func _on_roll_ten() -> void:
 			results[results.size() - 1] = guaranteed
 	var lines: PackedStringArray = []
 	var last_new_char: CharacterData = null
+	var has_bgm := false
 	for prize in results:
 		if prize.is_empty():
 			continue
@@ -395,10 +397,16 @@ func _on_roll_ten() -> void:
 				last_new_char = c
 		else:
 			lines.append("♪ %s%s" % [prize.path.get_file().get_basename(), mark])
+			has_bgm = true
 	GameState.save_progress()
 	_update_gacha_ui()
 	coins_changed.emit()
 	_play_gacha_video(func() -> void:
-		result_image.texture = last_new_char.tatie_sprite if last_new_char else null
+		if last_new_char:
+			result_image.texture = last_new_char.tatie_sprite
+		elif has_bgm:
+			result_image.texture = BGM_DISC_ICON
+		else:
+			result_image.texture = null
 		result_label.add_theme_font_size_override("font_size", 24)
 		result_label.text = "\n".join(lines))
