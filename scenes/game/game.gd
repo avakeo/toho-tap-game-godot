@@ -48,10 +48,16 @@ var player_max_hp: float
 var tap_damage: float
 var battle_active: bool = false
 var attack_timer: float = 0.0
+# 動画広告での復活はフェーズごとに1回まで
+var _revive_used: bool = false
 const ENEMY_ATTACK_INTERVAL: float = 2.0
 const TAP_DAMAGE: float = 10.0
 const ENEMY_DAMAGE: float = 10.0
 const XP_PER_TAP: int = 1
+# 動画広告リワード: 敗北時に復活したときのHP回復割合(最大HPに対する比率)
+const AD_REVIVE_HP_RATIO: float = 1.0
+# 動画広告リワード: 勝利リザルトで付与する経験値
+const AD_XP_BONUS: int = 30
 const ENEMY_HP_GROWTH_PER_STAGE: float = 0.3
 const ENEMY_ATK_GROWTH_PER_STAGE: float = 0.2
 # 敵レベル: プレイヤーのレベルに追従して強くなる(戦闘を拮抗させる)
@@ -86,7 +92,9 @@ func _ready() -> void:
 	tap_button.pressed.connect(_on_tap_enemy)
 	lose_layer.retry_requested.connect(_on_retry)
 	lose_layer.title_requested.connect(_on_title)
+	lose_layer.revive_requested.connect(_on_revive)
 	result_layer.next_requested.connect(_on_next_enemy)
+	result_layer.xp_bonus_requested.connect(_on_xp_bonus)
 
 	option_wheel.setup(all_chars)
 	option_wheel.player_char_selected.connect(_on_player_char_selected)
@@ -243,6 +251,7 @@ func start_battle_phase() -> void:
 
 	attack_timer = 0.0
 	battle_active = true
+	_revive_used = false
 
 # レベル(全キャラ共有)に応じたプレイヤーの最大HP・タップ攻撃力を反映
 func _refresh_player_stats() -> void:
@@ -431,7 +440,18 @@ func _start_win_talk() -> void:
 
 func _show_result() -> void:
 	_state = State.RESULT
-	result_layer.show_result()
+	result_layer.show_result(AD_XP_BONUS)
+
+# 動画広告視聴の報酬として経験値を付与する(勝利リザルト)
+func _on_xp_bonus() -> void:
+	var levels_gained: int = GameState.add_xp(AD_XP_BONUS)
+	GameState.save_progress()
+	_refresh_player_stats()
+	_update_xp_ui()
+	var msg := "XP +%d 獲得！" % AD_XP_BONUS
+	if levels_gained > 0:
+		msg += "  レベルアップ！ Lv.%d" % GameState.player_level
+	result_layer.show_bonus_granted(msg)
 
 func _on_next_enemy() -> void:
 	# 一番下の敵を倒した後は最初の敵に戻る(周回)
@@ -454,7 +474,21 @@ func _on_player_death() -> void:
 	dialogue_layer.start_dialogue(csv, player_data, current_enemy, _show_lose)
 
 func _show_lose() -> void:
-	lose_layer.show_lose(player_data.defeated_sprite)
+	lose_layer.show_lose(player_data.defeated_sprite, not _revive_used)
+
+# 動画広告視聴の報酬として復活する。敵HPはそのまま、自分のHPだけ回復して戦闘を再開
+func _on_revive() -> void:
+	_revive_used = true
+	_state = State.BATTLE
+	_refresh_player_stats()
+	player_hp = maxf(1.0, player_max_hp * AD_REVIVE_HP_RATIO)
+	player_hp_bar.max_value = player_max_hp
+	player_hp_bar.value = player_hp
+	_update_hp_labels()
+	battle_layer.visible = true
+	option_wheel.visible = true
+	attack_timer = 0.0
+	battle_active = true
 
 func _on_retry() -> void:
 	start_battle_phase()

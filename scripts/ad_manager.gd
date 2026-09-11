@@ -11,11 +11,11 @@ signal rewarded(placement: String)
 # 広告の準備状態が変わったときに通知(ボタンの活性化などに使う)
 signal availability_changed(available: bool)
 
-# Google公式のテスト用リワード広告ユニットID。リリース時に自前のIDへ差し替える。
+# リワード広告ユニットID。iOSは本番ID、AndroidはGoogle公式テストID(リリース時に差し替える)。
 # placementごとにユニットIDを分けたくなったら値を Dictionary にして拡張する。
 const AD_UNIT_IDS := {
 	"Android": "ca-app-pub-3940256099942544/5224354917",
-	"iOS": "ca-app-pub-3940256099942544/1712485313",
+	"iOS": "ca-app-pub-7401497687267095/6072375289",
 }
 const MAX_LOAD_RETRY := 5
 # 擬似視聴モードで成功を返すまでの秒数
@@ -59,15 +59,15 @@ func show_rewarded(placement: String, on_result: Callable = Callable()) -> void:
 	var ad := _rewarded_ad
 	_rewarded_ad = null
 	availability_changed.emit(false)
-	var earned := false
+	var outcome := {"earned": false}
 
 	var reward_listener := OnUserEarnedRewardListener.new()
 	reward_listener.on_user_earned_reward = func(_item: RewardedItem) -> void:
-		earned = true
+		outcome.earned = true
 
 	ad.full_screen_content_callback.on_ad_dismissed_full_screen_content = func() -> void:
 		ad.destroy()
-		_finish(placement, earned, on_result)
+		_finish(placement, outcome.earned, on_result)
 		_load_ad()
 	ad.full_screen_content_callback.on_ad_failed_to_show_full_screen_content = func(error: AdError) -> void:
 		push_warning("AdManager: 表示失敗 " + str(error.message))
