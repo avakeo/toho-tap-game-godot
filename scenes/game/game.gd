@@ -91,6 +91,9 @@ const SE_DIR := "res://assets/sounds/se/"
 var _stage_was_cleared: bool = false
 
 func _ready() -> void:
+	# 画面下にバナー広告を常時表示し、その高さ分だけ各レイヤーのUIを上に詰める
+	AdManager.banner_height_changed.connect(_apply_banner_inset)
+	AdManager.show_banner()
 	se_player.bus = GameState.SE_BUS_NAME
 	_load_se()
 	_load_characters()
@@ -561,3 +564,62 @@ func _on_gallery_requested() -> void:
 func _on_title_requested() -> void:
 	get_tree().paused = false
 	get_tree().change_scene_to_file("res://scenes/title/title.tscn")
+
+func _exit_tree() -> void:
+	AdManager.hide_banner()
+
+# 各 CanvasLayer 直下の Control を SafeRoot でまとめ、SafeRoot の下端を
+# バナー分だけ縮めることで、アンカー配置のUI全体がバナーを避けるようにする
+func _apply_banner_inset(height_px: int) -> void:
+	var window_h := float(DisplayServer.window_get_size().y)
+	var viewport_h := get_viewport().get_visible_rect().size.y
+	var inset := 0.0
+	if window_h > 0.0 and height_px > 0:
+		inset = float(height_px) * (viewport_h / window_h)
+	for child in get_children():
+		if child is CanvasLayer and child.name != "BannerPlaceholderLayer":
+			_safe_root_for(child).offset_bottom = -inset
+	_update_banner_placeholder(inset)
+
+# 擬似モード(エディタ・PC)ではバナーが出ないので、同じ高さの帯を描いて位置を確認できるようにする
+var _banner_placeholder: Control
+
+func _update_banner_placeholder(inset: float) -> void:
+	if not AdManager.is_fake_mode():
+		return
+	if _banner_placeholder == null:
+		var layer := CanvasLayer.new()
+		layer.name = "BannerPlaceholderLayer"
+		layer.layer = 10
+		add_child(layer)
+		var rect := ColorRect.new()
+		rect.color = Color(0.15, 0.15, 0.15, 1)
+		rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		rect.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+		layer.add_child(rect)
+		var label := Label.new()
+		label.text = "AD BANNER (擬似)"
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		label.set_anchors_preset(Control.PRESET_FULL_RECT)
+		rect.add_child(label)
+		_banner_placeholder = rect
+	_banner_placeholder.offset_top = -inset
+	_banner_placeholder.visible = inset > 0.0
+
+func _safe_root_for(layer: CanvasLayer) -> Control:
+	var existing := layer.get_node_or_null("SafeRoot")
+	if existing != null:
+		return existing
+	var safe_root := Control.new()
+	safe_root.name = "SafeRoot"
+	safe_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	safe_root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var controls: Array[Node] = []
+	for c in layer.get_children():
+		if c is Control:
+			controls.append(c)
+	layer.add_child(safe_root)
+	for c in controls:
+		c.reparent(safe_root, false)
+	return safe_root

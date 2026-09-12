@@ -6,6 +6,8 @@ extends Node
 # 強制表示のインタースティシャル広告は
 #   AdManager.show_interstitial(func() -> void: ...)
 # で、閉じられた(または表示できなかった)ときにコールバックが呼ばれる。
+# 画面下のバナーは show_banner()/hide_banner() で出し入れし、高さは
+# banner_height_changed(高さ[物理px]) で通知する(UIをバナー分だけ避けるために使う)。
 # エディタやPC実行では AdMob プラグインが存在しないため、擬似視聴モードで
 # 即座に成功を返す(ゲームロジック側の開発・検証用)。
 
@@ -13,6 +15,8 @@ extends Node
 signal rewarded(placement: String)
 # 広告の準備状態が変わったときに通知(ボタンの活性化などに使う)
 signal availability_changed(available: bool)
+# バナーの表示高さ(物理px)が変わったときに通知。非表示・失敗時は 0
+signal banner_height_changed(height_px: int)
 
 # 本番の広告ユニットID。リリースビルドでのみ使う。
 # placementごとにユニットIDを分けたくなったら値を Dictionary にして拡張する。
@@ -24,6 +28,10 @@ const INTERSTITIAL_UNIT_IDS := {
 	"Android": "",  # Android版リリース時に設定する
 	"iOS": "ca-app-pub-7401497687267095/3172989013",
 }
+const BANNER_UNIT_IDS := {
+	"Android": "",  # Android版リリース時に設定する
+	"iOS": "",      # AdMobでバナーユニットを作成したら設定する
+}
 # Google公式のテスト用ユニットID。デバッグビルド、または本番IDが未設定のときに使う。
 # 本番ユニットは作成直後 No fill になりやすいので、開発中はこちらで動作確認する。
 const TEST_AD_UNIT_IDS := {
@@ -34,9 +42,15 @@ const TEST_INTERSTITIAL_UNIT_IDS := {
 	"Android": "ca-app-pub-3940256099942544/1033173712",
 	"iOS": "ca-app-pub-3940256099942544/4411468910",
 }
+const TEST_BANNER_UNIT_IDS := {
+	"Android": "ca-app-pub-3940256099942544/6300978111",
+	"iOS": "ca-app-pub-3940256099942544/2934735716",
+}
 const MAX_LOAD_RETRY := 5
 # 擬似視聴モードで成功を返すまでの秒数
 const FAKE_WATCH_SECONDS := 0.5
+# 擬似モードで想定するバナー高さ(画面高に対する比率)。実機のアダプティブバナー相当
+const FAKE_BANNER_HEIGHT_RATIO := 0.07
 
 var _rewarded_ad: RewardedAd
 var _is_loading := false
@@ -44,6 +58,8 @@ var _retry_count := 0
 var _interstitial_ad: InterstitialAd
 var _is_loading_interstitial := false
 var _interstitial_retry_count := 0
+var _banner: AdView
+var _banner_visible := false
 # ネイティブプラグインが使える環境か(Android/iOSの実機ビルドのみtrue)
 var _plugin_available := false
 # プラグインが無い環境で擬似視聴を許可するか(エディタ・PCのみ)
@@ -59,6 +75,10 @@ func _ready() -> void:
 		# 実機以外は擬似モード。モバイル実機でプラグインが無い場合は
 		# 導入ミスに気付けるよう擬似モードにはしない(常に利用不可)
 		_fake_mode = OS.has_feature("editor") or OS.get_name() in ["Windows", "macOS", "Linux"]
+
+# エディタ・PCの擬似モードか(バナーのプレースホルダー表示などに使う)
+func is_fake_mode() -> bool:
+	return _fake_mode
 
 # 広告を表示できる状態か。リワードボタンの表示/活性の判定に使う
 func is_ready() -> bool:
@@ -194,3 +214,40 @@ func _load_interstitial() -> void:
 		_load_interstitial()
 
 	InterstitialAdLoader.new().load(unit_id, AdRequest.new(), callback)
+
+# 画面下にアダプティブバナーを表示する。ロード完了後に banner_height_changed を発火する
+func show_banner() -> void:
+	_banner_visible = true
+	if _fake_mode:
+		# エディタ・PCでもレイアウト確認できるよう、バナー相当の高さだけ通知する
+		banner_height_changed.emit(int(DisplayServer.window_get_size().y * FAKE_BANNER_HEIGHT_RATIO))
+		return
+	if not _plugin_available:
+		return
+	if _banner != null:
+		_banner.show()
+		banner_height_changed.emit(_banner.get_height_in_pixels())
+		return
+	var unit_id := _resolve_unit_id(BANNER_UNIT_IDS, TEST_BANNER_UNIT_IDS)
+	if unit_id.is_empty():
+		return
+	var size := AdSize.get_current_orientation_anchored_adaptive_banner_ad_size(AdSize.FULL_WIDTH)
+	var view := AdView.new(unit_id, size, AdPosition.Values.BOTTOM)
+	var listener := AdListener.new()
+	listener.on_ad_loaded = func() -> void:
+		if not _banner_visible:
+			view.hide()
+			return
+		banner_height_changed.emit(view.get_height_in_pixels())
+	listener.on_ad_failed_to_load = func(error: LoadAdError) -> void:
+		push_warning("AdManager: バナーロード失敗 " + str(error.message))
+		banner_height_changed.emit(0)
+	view.ad_listener = listener
+	_banner = view
+	view.load_ad(AdRequest.new())
+
+func hide_banner() -> void:
+	_banner_visible = false
+	if _banner != null:
+		_banner.hide()
+	banner_height_changed.emit(0)
