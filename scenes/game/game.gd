@@ -50,7 +50,7 @@ var battle_active: bool = false
 var attack_timer: float = 0.0
 # 動画広告での復活はフェーズごとに1回まで
 var _revive_used: bool = false
-const ENEMY_ATTACK_INTERVAL: float = 2.0
+const ENEMY_ATTACK_INTERVAL: float = 1.2
 const TAP_DAMAGE: float = 10.0
 const ENEMY_DAMAGE: float = 10.0
 const XP_PER_TAP: int = 1
@@ -58,11 +58,13 @@ const XP_PER_TAP: int = 1
 const AD_REVIVE_HP_RATIO: float = 1.0
 # 動画広告リワード: 勝利リザルトで付与する経験値
 const AD_XP_BONUS: int = 30
-const ENEMY_HP_GROWTH_PER_STAGE: float = 0.3
-const ENEMY_ATK_GROWTH_PER_STAGE: float = 0.2
+# 敵の基礎HP倍率(キャラ設定のmax_hpに掛ける)。1ステージあたり数十タップで倒せる程度に調整
+const ENEMY_HP_BASE_MULT: float = 2.5
+const ENEMY_HP_GROWTH_PER_STAGE: float = 0.35
+const ENEMY_ATK_GROWTH_PER_STAGE: float = 0.25
 # 敵レベル: プレイヤーのレベルに追従して強くなる(戦闘を拮抗させる)
 const ENEMY_LEVEL_PER_STAGE: int = 2      # ステージが進むごとの敵レベル加算
-const ENEMY_HP_PER_LEVEL: float = 20.0    # 敵レベル1あたりのHP増加
+const ENEMY_HP_PER_LEVEL: float = 25.0    # 敵レベル1あたりのHP増加
 const ENEMY_ATK_PER_LEVEL: float = 2.0    # 敵レベル1あたりの攻撃力増加
 const COIN_PER_TAP: int = 1
 const COIN_PER_FORM: int = 10
@@ -262,7 +264,7 @@ func _refresh_player_stats() -> void:
 func _refresh_enemy_stats() -> void:
 	var stage := float(current_enemy_index)
 	enemy_level = GameState.player_level + current_enemy_index * ENEMY_LEVEL_PER_STAGE
-	enemy_max_hp = current_enemy.max_hp * (1.0 + ENEMY_HP_GROWTH_PER_STAGE * stage) \
+	enemy_max_hp = current_enemy.max_hp * ENEMY_HP_BASE_MULT * (1.0 + ENEMY_HP_GROWTH_PER_STAGE * stage) \
 			+ ENEMY_HP_PER_LEVEL * float(enemy_level - 1)
 	enemy_damage = ENEMY_DAMAGE * (1.0 + ENEMY_ATK_GROWTH_PER_STAGE * stage) \
 			+ ENEMY_ATK_PER_LEVEL * float(enemy_level - 1)

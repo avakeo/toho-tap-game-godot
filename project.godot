@@ -24,6 +24,12 @@ config/features=PackedStringArray("4.7", "Mobile")
 GameState="*res://scripts/game_state.gd"
 AdManager="*res://scripts/ad_manager.gd"
 
+[audio]
+
+; iOSのマナーモード(サイレントスイッチ)中でもBGM・SEを鳴らす(Playbackカテゴリ)
+general/ios/session_category=3
+general/ios/mix_with_others=true
+
 [display]
 
 window/size/viewport_width=1080
