@@ -32,6 +32,12 @@ const BANNER_UNIT_IDS := {
 	"Android": "",  # Android版リリース時に設定する
 	"iOS": "ca-app-pub-7401497687267095/6505371547",
 }
+# アプリ起動時広告(App Open)。現在の AdMob プラグイン v4.3.1 は未対応で、
+# v5 系へ更新すると使える。IDだけ先に控えておく
+const APP_OPEN_UNIT_IDS := {
+	"Android": "",
+	"iOS": "ca-app-pub-7401497687267095/3239457689",
+}
 # Google公式のテスト用ユニットID。デバッグビルド、または本番IDが未設定のときに使う。
 # 本番ユニットは作成直後 No fill になりやすいので、開発中はこちらで動作確認する。
 const TEST_AD_UNIT_IDS := {
