@@ -14,14 +14,23 @@ signal rewarded(placement: String)
 # 広告の準備状態が変わったときに通知(ボタンの活性化などに使う)
 signal availability_changed(available: bool)
 
-# リワード広告ユニットID。iOSは本番ID、AndroidはGoogle公式テストID(リリース時に差し替える)。
+# 本番の広告ユニットID。リリースビルドでのみ使う。
 # placementごとにユニットIDを分けたくなったら値を Dictionary にして拡張する。
 const AD_UNIT_IDS := {
-	"Android": "ca-app-pub-3940256099942544/5224354917",
+	"Android": "",  # Android版リリース時に設定する
 	"iOS": "ca-app-pub-7401497687267095/6072375289",
 }
-# インタースティシャル広告ユニットID(Google公式テストID)。リリース時に自前のIDへ差し替える。
 const INTERSTITIAL_UNIT_IDS := {
+	"Android": "",  # Android版リリース時に設定する
+	"iOS": "",      # AdMobでインタースティシャルユニットを作成したら設定する
+}
+# Google公式のテスト用ユニットID。デバッグビルド、または本番IDが未設定のときに使う。
+# 本番ユニットは作成直後 No fill になりやすいので、開発中はこちらで動作確認する。
+const TEST_AD_UNIT_IDS := {
+	"Android": "ca-app-pub-3940256099942544/5224354917",
+	"iOS": "ca-app-pub-3940256099942544/1712485313",
+}
+const TEST_INTERSTITIAL_UNIT_IDS := {
 	"Android": "ca-app-pub-3940256099942544/1033173712",
 	"iOS": "ca-app-pub-3940256099942544/4411468910",
 }
@@ -95,10 +104,19 @@ func _finish(placement: String, success: bool, on_result: Callable) -> void:
 	if on_result.is_valid():
 		on_result.call(success)
 
+# 使うユニットIDを決める。デバッグビルドや本番IDが空のときはテストIDにフォールバック
+func _resolve_unit_id(production: Dictionary, test: Dictionary) -> String:
+	var os_name := OS.get_name()
+	var prod_id: String = production.get(os_name, "")
+	if OS.is_debug_build() or prod_id.is_empty():
+		return test.get(os_name, "")
+	return prod_id
+
 func _load_ad() -> void:
 	if _is_loading or _rewarded_ad != null:
 		return
-	if not AD_UNIT_IDS.has(OS.get_name()):
+	var unit_id := _resolve_unit_id(AD_UNIT_IDS, TEST_AD_UNIT_IDS)
+	if unit_id.is_empty():
 		return
 	_is_loading = true
 
@@ -113,7 +131,7 @@ func _load_ad() -> void:
 		push_warning("AdManager: ロード失敗 " + str(error.message))
 		_retry_load()
 
-	RewardedAdLoader.new().load(AD_UNIT_IDS[OS.get_name()], AdRequest.new(), callback)
+	RewardedAdLoader.new().load(unit_id, AdRequest.new(), callback)
 
 # ロード失敗時は指数バックオフ(2,4,8...秒)で再試行する
 func _retry_load() -> void:
@@ -156,7 +174,8 @@ func _call_if_valid(callback: Callable) -> void:
 func _load_interstitial() -> void:
 	if _is_loading_interstitial or _interstitial_ad != null:
 		return
-	if not INTERSTITIAL_UNIT_IDS.has(OS.get_name()):
+	var unit_id := _resolve_unit_id(INTERSTITIAL_UNIT_IDS, TEST_INTERSTITIAL_UNIT_IDS)
+	if unit_id.is_empty():
 		return
 	_is_loading_interstitial = true
 
@@ -174,4 +193,4 @@ func _load_interstitial() -> void:
 		await get_tree().create_timer(pow(2.0, _interstitial_retry_count)).timeout
 		_load_interstitial()
 
-	InterstitialAdLoader.new().load(INTERSTITIAL_UNIT_IDS[OS.get_name()], AdRequest.new(), callback)
+	InterstitialAdLoader.new().load(unit_id, AdRequest.new(), callback)
