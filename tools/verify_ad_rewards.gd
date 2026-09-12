@@ -4,6 +4,9 @@ extends SceneTree
 # 擬似視聴モードで正しくシグナルを発火することを検証する
 var _revived := false
 var _bonus := false
+var _boosted := false
+var _levelup_closed := false
+var _interstitial_closed := false
 
 func _init() -> void:
 	call_deferred("_run")
@@ -36,6 +39,21 @@ func _run() -> void:
 	await create_timer(1.0).timeout
 	print("bonus=", _bonus, " claimed text=", result.xp_bonus_button.text, " disabled=", result.xp_bonus_button.disabled)
 
-	var ok: bool = _revived and _bonus and result.xp_bonus_button.disabled
+	var levelup: CanvasLayer = (load("res://scenes/levelup/levelup.tscn") as PackedScene).instantiate()
+	root.add_child(levelup)
+	levelup.boost_requested.connect(func() -> void: _boosted = true)
+	levelup.closed.connect(func() -> void: _levelup_closed = true)
+	levelup.show_level_up(5, 10, 2, 10, 2)
+	print("boost button text=", levelup.boost_button.text, " disabled=", levelup.boost_button.disabled)
+	levelup.boost_button.pressed.emit()
+	await create_timer(1.0).timeout
+	print("boosted=", _boosted, " levelup closed=", _levelup_closed, " hidden=", not levelup.visible)
+
+	ad_manager.show_interstitial(func() -> void: _interstitial_closed = true)
+	await create_timer(1.0).timeout
+	print("interstitial closed=", _interstitial_closed)
+
+	var ok: bool = _revived and _bonus and result.xp_bonus_button.disabled \
+			and _boosted and _levelup_closed and _interstitial_closed
 	print("RESULT: ", "ALL OK" if ok else "FAILED")
 	quit(0 if ok else 1)

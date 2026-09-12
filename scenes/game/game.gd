@@ -23,12 +23,12 @@ const GALLERY_SCENE := preload("res://scenes/gallery/gallery.tscn")
 @onready var coin_label: Label = $BattleLayer/CoinLabel
 @onready var player_sd_sprite: TextureRect = $BattleLayer/PlayerSDSprite
 @onready var player_level_label: Label = $BattleLayer/PlayerLevelLabel
-@onready var level_up_label: Label = $BattleLayer/LevelUpLabel
 @onready var player_xp_bar: ProgressBar = $BattleLayer/PlayerXPBar
 @onready var tap_button: Button = $BattleLayer/TapButton
 @onready var dialogue_layer = $DialogueLayer
 @onready var lose_layer = $LoseLayer
 @onready var result_layer = $ResultLayer
+@onready var level_up_layer = $LevelUpLayer
 @onready var option_wheel = $OptionWheel
 
 var player_data: CharacterData
@@ -62,10 +62,14 @@ const AD_XP_BONUS: int = 30
 const ENEMY_HP_BASE_MULT: float = 2.5
 const ENEMY_HP_GROWTH_PER_STAGE: float = 0.35
 const ENEMY_ATK_GROWTH_PER_STAGE: float = 0.25
-# 敵レベル: プレイヤーのレベルに追従して強くなる(戦闘を拮抗させる)
-const ENEMY_LEVEL_PER_STAGE: int = 2      # ステージが進むごとの敵レベル加算
-const ENEMY_HP_PER_LEVEL: float = 25.0    # 敵レベル1あたりのHP増加
-const ENEMY_ATK_PER_LEVEL: float = 2.0    # 敵レベル1あたりの攻撃力増加
+# 敵レベル: ステージごとに固定(プレイヤーには追従しない)。
+# プレイヤーがレベルを上げて追いつかないと勝てない設計にする
+const ENEMY_BASE_LEVEL: int = 3           # 最初のステージの敵レベル
+const ENEMY_LEVEL_PER_STAGE: int = 4      # ステージが進むごとの敵レベル加算
+const ENEMY_HP_PER_LEVEL: float = 40.0    # 敵レベル1あたりのHP増加
+const ENEMY_ATK_PER_LEVEL: float = 3.0    # 敵レベル1あたりの攻撃力増加
+# 動画広告リワード: レベルアップ時に視聴すると、通常上昇分にこの倍率分が追加される
+const AD_LEVEL_UP_BOOST_MULT: float = 1.0
 const COIN_PER_TAP: int = 1
 const COIN_PER_FORM: int = 10
 const COIN_STAGE_CLEAR_BONUS: int = 30
@@ -95,6 +99,8 @@ func _ready() -> void:
 	lose_layer.retry_requested.connect(_on_retry)
 	lose_layer.title_requested.connect(_on_title)
 	lose_layer.revive_requested.connect(_on_revive)
+	level_up_layer.boost_requested.connect(_on_level_up_boost)
+	level_up_layer.closed.connect(_on_level_up_closed)
 	result_layer.next_requested.connect(_on_next_enemy)
 	result_layer.xp_bonus_requested.connect(_on_xp_bonus)
 
@@ -263,7 +269,7 @@ func _refresh_player_stats() -> void:
 # 敵レベル(プレイヤーレベル+ステージ加算)とステージ係数で敵のHP・攻撃力を強化する
 func _refresh_enemy_stats() -> void:
 	var stage := float(current_enemy_index)
-	enemy_level = GameState.player_level + current_enemy_index * ENEMY_LEVEL_PER_STAGE
+	enemy_level = ENEMY_BASE_LEVEL + current_enemy_index * ENEMY_LEVEL_PER_STAGE
 	enemy_max_hp = current_enemy.max_hp * ENEMY_HP_BASE_MULT * (1.0 + ENEMY_HP_GROWTH_PER_STAGE * stage) \
 			+ ENEMY_HP_PER_LEVEL * float(enemy_level - 1)
 	enemy_damage = ENEMY_DAMAGE * (1.0 + ENEMY_ATK_GROWTH_PER_STAGE * stage) \
@@ -359,31 +365,36 @@ func _on_level_up(levels_gained: int) -> void:
 	player_level_label.modulate = Color(1.0, 0.9, 0.2)
 	var tween := create_tween()
 	tween.tween_property(player_level_label, "modulate", Color.WHITE, 0.6)
-	_show_level_up_popup(levels_gained)
-
-var _level_up_tween: Tween
-
-func _show_level_up_popup(levels_gained: int) -> void:
-	level_up_label.text = "レベルアップ！ Lv.%d\n最大HP +%d ／ 攻撃力 +%d" % [
+	# 敵の攻撃を止めてポップアップを出す。閉じたら _on_level_up_closed で再開
+	battle_active = false
+	_pending_boost_hp = int(GameState.HP_PER_LEVEL * levels_gained * AD_LEVEL_UP_BOOST_MULT)
+	_pending_boost_atk = int(GameState.ATK_PER_LEVEL * levels_gained * AD_LEVEL_UP_BOOST_MULT)
+	level_up_layer.show_level_up(
 		GameState.player_level,
 		int(GameState.HP_PER_LEVEL) * levels_gained,
 		int(GameState.ATK_PER_LEVEL) * levels_gained,
-	]
-	if _level_up_tween != null and _level_up_tween.is_valid():
-		_level_up_tween.kill()
-	level_up_label.visible = true
-	level_up_label.pivot_offset = level_up_label.size / 2.0
-	level_up_label.modulate = Color(1, 1, 1, 0)
-	level_up_label.scale = Vector2(0.7, 0.7)
-	_level_up_tween = create_tween()
-	_level_up_tween.set_parallel(true)
-	_level_up_tween.tween_property(level_up_label, "modulate:a", 1.0, 0.15)
-	_level_up_tween.tween_property(level_up_label, "scale", Vector2.ONE, 0.25) \
-			.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	_level_up_tween.set_parallel(false)
-	_level_up_tween.tween_interval(1.2)
-	_level_up_tween.tween_property(level_up_label, "modulate:a", 0.0, 0.4)
-	_level_up_tween.tween_callback(func(): level_up_label.visible = false)
+		_pending_boost_hp,
+		_pending_boost_atk,
+	)
+
+# レベルアップポップアップで提示している追加ステータス量
+var _pending_boost_hp := 0
+var _pending_boost_atk := 0
+
+# 動画広告視聴の報酬としてレベルアップの上昇量を積み増す(永続)
+func _on_level_up_boost() -> void:
+	GameState.add_stat_boost(float(_pending_boost_hp), float(_pending_boost_atk))
+	var old_max := player_max_hp
+	_refresh_player_stats()
+	player_hp = minf(player_hp + (player_max_hp - old_max), player_max_hp)
+	player_hp_bar.max_value = player_max_hp
+	player_hp_bar.value = player_hp
+	_update_hp_labels()
+
+func _on_level_up_closed() -> void:
+	if _state == State.BATTLE:
+		attack_timer = 0.0
+		battle_active = true
 
 func _execute_enemy_attack() -> void:
 	player_hp = maxf(player_hp - enemy_damage, 0.0)
@@ -442,8 +453,10 @@ func _start_win_talk() -> void:
 
 func _show_result() -> void:
 	_state = State.RESULT
-	# 倒した敵の最終形態(衣装破壊)を表示したままリザルトを出す
-	result_layer.show_result(AD_XP_BONUS, current_enemy.battle_forms[max_phase - 1])
+	# 敵撃破ごとにインタースティシャル広告を強制表示し、閉じられたらリザルトを出す
+	AdManager.show_interstitial(func() -> void:
+		# 倒した敵の最終形態(衣装破壊)を表示したままリザルトを出す
+		result_layer.show_result(AD_XP_BONUS, current_enemy.battle_forms[max_phase - 1]))
 
 # 動画広告視聴の報酬として経験値を付与する(勝利リザルト)
 func _on_xp_bonus() -> void:

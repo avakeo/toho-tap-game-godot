@@ -3,6 +3,9 @@ extends Node
 # 用途(ガチャ/Lv upなど)は placement 文字列で区別するだけで、呼び出し側は
 #   AdManager.show_rewarded("gacha", func(success: bool) -> void: ...)
 # と書けばよい。ロード・視聴後の再ロード・失敗時のリトライは内部で行う。
+# 強制表示のインタースティシャル広告は
+#   AdManager.show_interstitial(func() -> void: ...)
+# で、閉じられた(または表示できなかった)ときにコールバックが呼ばれる。
 # エディタやPC実行では AdMob プラグインが存在しないため、擬似視聴モードで
 # 即座に成功を返す(ゲームロジック側の開発・検証用)。
 
@@ -17,6 +20,11 @@ const AD_UNIT_IDS := {
 	"Android": "ca-app-pub-3940256099942544/5224354917",
 	"iOS": "ca-app-pub-7401497687267095/6072375289",
 }
+# インタースティシャル広告ユニットID(Google公式テストID)。リリース時に自前のIDへ差し替える。
+const INTERSTITIAL_UNIT_IDS := {
+	"Android": "ca-app-pub-3940256099942544/1033173712",
+	"iOS": "ca-app-pub-3940256099942544/4411468910",
+}
 const MAX_LOAD_RETRY := 5
 # 擬似視聴モードで成功を返すまでの秒数
 const FAKE_WATCH_SECONDS := 0.5
@@ -24,6 +32,9 @@ const FAKE_WATCH_SECONDS := 0.5
 var _rewarded_ad: RewardedAd
 var _is_loading := false
 var _retry_count := 0
+var _interstitial_ad: InterstitialAd
+var _is_loading_interstitial := false
+var _interstitial_retry_count := 0
 # ネイティブプラグインが使える環境か(Android/iOSの実機ビルドのみtrue)
 var _plugin_available := false
 # プラグインが無い環境で擬似視聴を許可するか(エディタ・PCのみ)
@@ -34,6 +45,7 @@ func _ready() -> void:
 	if _plugin_available:
 		MobileAds.initialize()
 		_load_ad()
+		_load_interstitial()
 	else:
 		# 実機以外は擬似モード。モバイル実機でプラグインが無い場合は
 		# 導入ミスに気付けるよう擬似モードにはしない(常に利用不可)
@@ -110,3 +122,56 @@ func _retry_load() -> void:
 	_retry_count += 1
 	await get_tree().create_timer(pow(2.0, _retry_count)).timeout
 	_load_ad()
+
+# インタースティシャル広告を表示する。閉じられた・表示できなかった、どちらの場合も
+# on_closed が呼ばれるので、呼び出し側はゲーム進行をそこに続ければよい。
+func show_interstitial(on_closed: Callable = Callable()) -> void:
+	if _fake_mode:
+		await get_tree().create_timer(FAKE_WATCH_SECONDS).timeout
+		print("AdManager: 擬似インタースティシャル表示完了")
+		_call_if_valid(on_closed)
+		return
+	if _interstitial_ad == null:
+		_call_if_valid(on_closed)
+		_load_interstitial()
+		return
+
+	var ad := _interstitial_ad
+	_interstitial_ad = null
+	ad.full_screen_content_callback.on_ad_dismissed_full_screen_content = func() -> void:
+		ad.destroy()
+		_call_if_valid(on_closed)
+		_load_interstitial()
+	ad.full_screen_content_callback.on_ad_failed_to_show_full_screen_content = func(error: AdError) -> void:
+		push_warning("AdManager: インタースティシャル表示失敗 " + str(error.message))
+		ad.destroy()
+		_call_if_valid(on_closed)
+		_load_interstitial()
+	ad.show()
+
+func _call_if_valid(callback: Callable) -> void:
+	if callback.is_valid():
+		callback.call()
+
+func _load_interstitial() -> void:
+	if _is_loading_interstitial or _interstitial_ad != null:
+		return
+	if not INTERSTITIAL_UNIT_IDS.has(OS.get_name()):
+		return
+	_is_loading_interstitial = true
+
+	var callback := InterstitialAdLoadCallback.new()
+	callback.on_ad_loaded = func(ad: InterstitialAd) -> void:
+		_is_loading_interstitial = false
+		_interstitial_retry_count = 0
+		_interstitial_ad = ad
+	callback.on_ad_failed_to_load = func(error: LoadAdError) -> void:
+		_is_loading_interstitial = false
+		push_warning("AdManager: インタースティシャルロード失敗 " + str(error.message))
+		if _interstitial_retry_count >= MAX_LOAD_RETRY:
+			return
+		_interstitial_retry_count += 1
+		await get_tree().create_timer(pow(2.0, _interstitial_retry_count)).timeout
+		_load_interstitial()
+
+	InterstitialAdLoader.new().load(INTERSTITIAL_UNIT_IDS[OS.get_name()], AdRequest.new(), callback)

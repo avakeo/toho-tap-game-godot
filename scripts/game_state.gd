@@ -14,6 +14,9 @@ var bgm_keep_on_opponent_change: bool = true
 # レベル・XPは全キャラ共有
 var player_level: int = 1
 var player_xp: int = 0
+# レベルアップ時に動画広告を見て得た追加ステータス(累積・永続)
+var boost_hp: float = 0.0
+var boost_atk: float = 0.0
 
 var coins: int = 0
 
@@ -148,15 +151,23 @@ func spend_coins(amount: int) -> bool:
 	return true
 
 func hp_bonus() -> float:
-	return HP_PER_LEVEL * float(player_level - 1)
+	return HP_PER_LEVEL * float(player_level - 1) + boost_hp
 
 func atk_bonus() -> float:
-	return ATK_PER_LEVEL * float(player_level - 1)
+	return ATK_PER_LEVEL * float(player_level - 1) + boost_atk
+
+# 動画広告のレベルアップ強化で得た追加ステータスを積み増す
+func add_stat_boost(hp: float, atk: float) -> void:
+	boost_hp += hp
+	boost_atk += atk
+	save_progress()
 
 func save_progress() -> void:
 	var cfg := ConfigFile.new()
 	cfg.set_value("progress", "player_level", player_level)
 	cfg.set_value("progress", "player_xp", player_xp)
+	cfg.set_value("progress", "boost_hp", boost_hp)
+	cfg.set_value("progress", "boost_atk", boost_atk)
 	cfg.set_value("progress", "coins", coins)
 	cfg.set_value("progress", "cleared_stages", cleared_stages)
 	cfg.set_value("progress", "owned_char_ids", owned_char_ids)
@@ -197,6 +208,8 @@ func load_progress() -> void:
 	se_volume = cfg.get_value("settings", "se_volume", 100.0)
 	player_level = cfg.get_value("progress", "player_level", 0)
 	player_xp = cfg.get_value("progress", "player_xp", 0)
+	boost_hp = cfg.get_value("progress", "boost_hp", 0.0)
+	boost_atk = cfg.get_value("progress", "boost_atk", 0.0)
 	if player_level > 0:
 		return
 	# 旧セーブ(キャラ別レベル)からの移行: 一番高いレベルを共有レベルとして引き継ぐ

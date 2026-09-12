@@ -1,0 +1,73 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scenes/levelup/levelup.gd" id="1_script"]
+[ext_resource type="FontFile" path="res://assets/fonts/ZenMaruGothic-Bold.ttf" id="2_font"]
+
+[node name="LevelUpLayer" type="CanvasLayer"]
+layer = 3
+visible = false
+script = ExtResource("1_script")
+
+[node name="Dimmer" type="ColorRect" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0, 0.7)
+
+[node name="TitleLabel" type="Label" parent="."]
+anchor_left = 0.05
+anchor_top = 0.22
+anchor_right = 0.95
+anchor_bottom = 0.32
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 84
+theme_override_colors/font_color = Color(1, 0.88, 0.35, 1)
+theme_override_colors/font_outline_color = Color(0.25, 0.08, 0.02, 1)
+theme_override_constants/outline_size = 16
+horizontal_alignment = 1
+vertical_alignment = 1
+text = "レベルアップ！"
+
+[node name="StatsLabel" type="Label" parent="."]
+anchor_left = 0.05
+anchor_top = 0.33
+anchor_right = 0.95
+anchor_bottom = 0.5
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 44
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+horizontal_alignment = 1
+vertical_alignment = 1
+text = ""
+
+[node name="BoostLabel" type="Label" parent="."]
+anchor_left = 0.05
+anchor_top = 0.52
+anchor_right = 0.95
+anchor_bottom = 0.58
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 36
+theme_override_colors/font_color = Color(1, 0.88, 0.35, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+horizontal_alignment = 1
+vertical_alignment = 1
+text = ""
+
+[node name="BoostButton" type="Button" parent="."]
+anchor_left = 0.1
+anchor_top = 0.6
+anchor_right = 0.9
+anchor_bottom = 0.68
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 44
+text = "動画を見て強化"
+
+[node name="ContinueButton" type="Button" parent="."]
+anchor_left = 0.1
+anchor_top = 0.7
+anchor_right = 0.9
+anchor_bottom = 0.78
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 44
+text = "そのまま続ける"
