@@ -6,7 +6,7 @@ var _started := false
 
 func _ready() -> void:
 	var blink := create_tween().set_loops()
-	blink.tween_property(tap_hint, "modulate:a", 0.25, 0.7)
+	blink.tween_property(tap_hint, "modulate:a", 0.5, 0.7)
 	blink.tween_property(tap_hint, "modulate:a", 1.0, 0.7)
 
 # 画面のどこをタップ(クリック)してもスタートする
