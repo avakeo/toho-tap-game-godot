@@ -8,6 +8,11 @@
 
 config_version=5
 
+[admob]
+
+general/android/enabled=false
+general/ios/app_id="ca-app-pub-7401497687267095~1187336963"
+
 [animation]
 
 compatibility/default_parent_skeleton_in_mesh_instance_3d=true
@@ -15,20 +20,19 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 [application]
 
 config/name="東方タップゲーム"
-config/icon="res://assets/icon/app_icon_1024.png"
 run/main_scene="res://scenes/title/title.tscn"
 config/features=PackedStringArray("4.7", "Mobile")
+config/icon="res://assets/icon/app_icon_1024.png"
+
+[audio]
+
+general/ios/session_category=3
+general/ios/mix_with_others=true
 
 [autoload]
 
 GameState="*res://scripts/game_state.gd"
 AdManager="*res://scripts/ad_manager.gd"
-
-[audio]
-
-; iOSのマナーモード(サイレントスイッチ)中でもBGM・SEを鳴らす(Playbackカテゴリ)
-general/ios/session_category=3
-general/ios/mix_with_others=true
 
 [display]
 
@@ -42,7 +46,11 @@ window/handheld/orientation=1
 
 enabled=PackedStringArray("res://addons/admob/plugin.cfg")
 
+[internationalization]
+
+locale/translations=PackedStringArray("res://addons/admob/gdscript/sample/translations/admob_sample.en.translation", "res://addons/admob/gdscript/sample/translations/admob_sample.pt_BR.translation", "res://addons/admob/gdscript/sample/translations/admob_sample.es.translation", "res://addons/admob/gdscript/sample/translations/admob_sample.zh_CN.translation", "res://addons/admob/gdscript/sample/translations/admob_sample.ja.translation")
+
 [rendering]
 
-textures/vram_compression/import_etc2_astc=true
 renderer/rendering_method="mobile"
+textures/vram_compression/import_etc2_astc=true

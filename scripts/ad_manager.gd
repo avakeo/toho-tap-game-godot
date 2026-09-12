@@ -8,6 +8,7 @@ extends Node
 # で、閉じられた(または表示できなかった)ときにコールバックが呼ばれる。
 # 画面下のバナーは show_banner()/hide_banner() で出し入れし、高さは
 # banner_height_changed(高さ[物理px]) で通知する(UIをバナー分だけ避けるために使う)。
+# 起動時広告(App Open)は初回ロード完了時と、バックグラウンド復帰時に自動で表示する。
 # エディタやPC実行では AdMob プラグインが存在しないため、擬似視聴モードで
 # 即座に成功を返す(ゲームロジック側の開発・検証用)。
 
@@ -32,8 +33,7 @@ const BANNER_UNIT_IDS := {
 	"Android": "",  # Android版リリース時に設定する
 	"iOS": "ca-app-pub-7401497687267095/6505371547",
 }
-# アプリ起動時広告(App Open)。現在の AdMob プラグイン v4.3.1 は未対応で、
-# v5 系へ更新すると使える。IDだけ先に控えておく
+# アプリ起動時広告(App Open)。起動時とバックグラウンド復帰時に表示する
 const APP_OPEN_UNIT_IDS := {
 	"Android": "",
 	"iOS": "ca-app-pub-7401497687267095/3239457689",
@@ -52,6 +52,14 @@ const TEST_BANNER_UNIT_IDS := {
 	"Android": "ca-app-pub-3940256099942544/6300978111",
 	"iOS": "ca-app-pub-3940256099942544/2934735716",
 }
+const TEST_APP_OPEN_UNIT_IDS := {
+	"Android": "ca-app-pub-3940256099942544/9257395921",
+	"iOS": "ca-app-pub-3940256099942544/5575463023",
+}
+# バックグラウンドから復帰したとき、前回の起動時広告からこの秒数以上経っていれば再表示する
+const APP_OPEN_MIN_INTERVAL_SECONDS := 60.0
+# ロード済みの起動時広告の有効期限(AdMobの仕様で4時間)
+const APP_OPEN_AD_EXPIRE_SECONDS := 4.0 * 60.0 * 60.0
 const MAX_LOAD_RETRY := 5
 # 擬似視聴モードで成功を返すまでの秒数
 const FAKE_WATCH_SECONDS := 0.5
@@ -66,6 +74,11 @@ var _is_loading_interstitial := false
 var _interstitial_retry_count := 0
 var _banner: AdView
 var _banner_visible := false
+var _app_open_ad: AppOpenAd
+var _is_loading_app_open := false
+var _app_open_loaded_at := 0.0
+var _app_open_last_shown_at := -1.0e9
+var _app_open_showing := false
 # ネイティブプラグインが使える環境か(Android/iOSの実機ビルドのみtrue)
 var _plugin_available := false
 # プラグインが無い環境で擬似視聴を許可するか(エディタ・PCのみ)
@@ -74,9 +87,13 @@ var _fake_mode := false
 func _ready() -> void:
 	_plugin_available = Engine.has_singleton("PoingGodotAdMob")
 	if _plugin_available:
-		MobileAds.initialize()
-		_load_ad()
-		_load_interstitial()
+		# v5 では初期化完了を待ってから広告をロードする必要がある
+		var init_listener := OnInitializationCompleteListener.new()
+		init_listener.on_initialization_complete = func(_status: InitializationStatus) -> void:
+			_load_ad()
+			_load_interstitial()
+			_load_app_open()
+		MobileAds.initialize(init_listener)
 	else:
 		# 実機以外は擬似モード。モバイル実機でプラグインが無い場合は
 		# 導入ミスに気付けるよう擬似モードにはしない(常に利用不可)
@@ -238,7 +255,7 @@ func show_banner() -> void:
 	if unit_id.is_empty():
 		return
 	var size := AdSize.get_current_orientation_anchored_adaptive_banner_ad_size(AdSize.FULL_WIDTH)
-	var view := AdView.new(unit_id, size, AdPosition.Values.BOTTOM)
+	var view := AdView.new(unit_id, size, AdPosition.BOTTOM)
 	var listener := AdListener.new()
 	listener.on_ad_loaded = func() -> void:
 		if not _banner_visible:
@@ -257,3 +274,61 @@ func hide_banner() -> void:
 	if _banner != null:
 		_banner.hide()
 	banner_height_changed.emit(0)
+
+# --- 起動時広告(App Open) ---
+
+# バックグラウンドから戻ったら起動時広告を出す(iOS/Android ともにこの通知が来る)
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_RESUMED:
+		_try_show_app_open()
+
+func _load_app_open() -> void:
+	if _is_loading_app_open or _app_open_ad != null:
+		return
+	var unit_id := _resolve_unit_id(APP_OPEN_UNIT_IDS, TEST_APP_OPEN_UNIT_IDS)
+	if unit_id.is_empty():
+		return
+	_is_loading_app_open = true
+
+	var callback := AppOpenAdLoadCallback.new()
+	callback.on_ad_loaded = func(ad: AppOpenAd) -> void:
+		_is_loading_app_open = false
+		_app_open_ad = ad
+		_app_open_loaded_at = Time.get_unix_time_from_system()
+		# 初回ロードは起動直後なので、そのまま起動時広告として表示する
+		_try_show_app_open()
+	callback.on_ad_failed_to_load = func(error: LoadAdError) -> void:
+		_is_loading_app_open = false
+		push_warning("AdManager: 起動時広告ロード失敗 " + str(error.message))
+
+	AppOpenAdLoader.new().load(unit_id, AdRequest.new(), callback)
+
+func _try_show_app_open() -> void:
+	if _fake_mode or not _plugin_available or _app_open_showing:
+		return
+	var now := Time.get_unix_time_from_system()
+	if now - _app_open_last_shown_at < APP_OPEN_MIN_INTERVAL_SECONDS:
+		return
+	if _app_open_ad == null:
+		_load_app_open()
+		return
+	if now - _app_open_loaded_at > APP_OPEN_AD_EXPIRE_SECONDS:
+		_app_open_ad.destroy()
+		_app_open_ad = null
+		_load_app_open()
+		return
+
+	var ad := _app_open_ad
+	_app_open_ad = null
+	_app_open_showing = true
+	ad.full_screen_content_callback.on_ad_dismissed_full_screen_content = func() -> void:
+		_app_open_showing = false
+		_app_open_last_shown_at = Time.get_unix_time_from_system()
+		ad.destroy()
+		_load_app_open()
+	ad.full_screen_content_callback.on_ad_failed_to_show_full_screen_content = func(error: AdError) -> void:
+		_app_open_showing = false
+		push_warning("AdManager: 起動時広告表示失敗 " + str(error.message))
+		ad.destroy()
+		_load_app_open()
+	ad.show()
