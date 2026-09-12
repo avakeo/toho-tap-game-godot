@@ -36,6 +36,10 @@ func _ready() -> void:
 	blink.tween_property(advance_hint, "modulate:a", 0.2, 0.6)
 	blink.tween_property(advance_hint, "modulate:a", 1.0, 0.6)
 
+# 会話開始直後・行送り直後はこの秒数だけタップを無視する(連打での読み飛ばし防止)
+const ADVANCE_LOCK_SECONDS := 0.4
+var _advance_unlock_msec: int = 0
+
 func start_dialogue(csv_path: String, left_char: CharacterData, right_char: CharacterData, on_finished: Callable) -> void:
 	_left_char = left_char
 	_right_char = right_char
@@ -51,7 +55,11 @@ func start_dialogue(csv_path: String, left_char: CharacterData, right_char: Char
 	if _lines.is_empty():
 		_finish()
 		return
+	_lock_advance()
 	_update_ui()
+
+func _lock_advance() -> void:
+	_advance_unlock_msec = Time.get_ticks_msec() + int(ADVANCE_LOCK_SECONDS * 1000.0)
 
 # 未執筆ファイルに入っている仮テキスト。会話行として表示しない
 const PLACEHOLDER_TEXT := "会話が用意されていない"
@@ -111,6 +119,9 @@ func _generic_lines(csv_path: String) -> Array[DialogueLine]:
 	return lines
 
 func _on_advance_pressed() -> void:
+	if Time.get_ticks_msec() < _advance_unlock_msec:
+		return
+	_lock_advance()
 	_current_index += 1
 	if _current_index >= _lines.size():
 		_finish()
