@@ -52,22 +52,24 @@ var attack_timer: float = 0.0
 var _revive_used: bool = false
 const ENEMY_ATTACK_INTERVAL: float = 1.2
 const TAP_DAMAGE: float = 10.0
-const ENEMY_DAMAGE: float = 10.0
+const ENEMY_DAMAGE: float = 8.0
 const XP_PER_TAP: int = 1
 # 動画広告リワード: 敗北時に復活したときのHP回復割合(最大HPに対する比率)
 const AD_REVIVE_HP_RATIO: float = 1.0
 # 動画広告リワード: 勝利リザルトで付与する経験値
 const AD_XP_BONUS: int = 30
-# 敵の基礎HP倍率(キャラ設定のmax_hpに掛ける)。1ステージあたり数十タップで倒せる程度に調整
-const ENEMY_HP_BASE_MULT: float = 2.5
-const ENEMY_HP_GROWTH_PER_STAGE: float = 0.35
-const ENEMY_ATK_GROWTH_PER_STAGE: float = 0.25
+# 敵HPはステージごとに倍々で増える(必要タップ数の伸びを大きくする)。
+# 一方で敵の攻撃力の伸びは緩やかにし、後半ほど「長く耐えて大量にタップする」戦いにする
+const ENEMY_HP_BASE_MULT: float = 3.0     # キャラ設定のmax_hpに掛ける基礎倍率
+const ENEMY_HP_STAGE_MULT: float = 2.0    # ステージが1つ進むごとのHP倍率
+const ENEMY_ATK_GROWTH_PER_STAGE: float = 0.05
+const COIN_GROWTH_PER_STAGE: float = 0.5  # ステージごとのコイン報酬の増加率
 # 敵レベル: ステージごとに固定(プレイヤーには追従しない)。
 # プレイヤーがレベルを上げて追いつかないと勝てない設計にする
 const ENEMY_BASE_LEVEL: int = 3           # 最初のステージの敵レベル
 const ENEMY_LEVEL_PER_STAGE: int = 4      # ステージが進むごとの敵レベル加算
 const ENEMY_HP_PER_LEVEL: float = 40.0    # 敵レベル1あたりのHP増加
-const ENEMY_ATK_PER_LEVEL: float = 3.0    # 敵レベル1あたりの攻撃力増加
+const ENEMY_ATK_PER_LEVEL: float = 0.4    # 敵レベル1あたりの攻撃力増加
 # 動画広告リワード: レベルアップ時に視聴すると、通常上昇分にこの倍率分が追加される
 const AD_LEVEL_UP_BOOST_MULT: float = 1.0
 const COIN_PER_TAP: int = 1
@@ -266,11 +268,11 @@ func _refresh_player_stats() -> void:
 	player_max_hp = player_data.max_hp + GameState.hp_bonus()
 	tap_damage = TAP_DAMAGE + GameState.atk_bonus()
 
-# 敵レベル(プレイヤーレベル+ステージ加算)とステージ係数で敵のHP・攻撃力を強化する
+# 敵レベル(ステージ固定)とステージ倍率で敵のHP・攻撃力を決める
 func _refresh_enemy_stats() -> void:
 	var stage := float(current_enemy_index)
 	enemy_level = ENEMY_BASE_LEVEL + current_enemy_index * ENEMY_LEVEL_PER_STAGE
-	enemy_max_hp = current_enemy.max_hp * ENEMY_HP_BASE_MULT * (1.0 + ENEMY_HP_GROWTH_PER_STAGE * stage) \
+	enemy_max_hp = current_enemy.max_hp * ENEMY_HP_BASE_MULT * pow(ENEMY_HP_STAGE_MULT, stage) \
 			+ ENEMY_HP_PER_LEVEL * float(enemy_level - 1)
 	enemy_damage = ENEMY_DAMAGE * (1.0 + ENEMY_ATK_GROWTH_PER_STAGE * stage) \
 			+ ENEMY_ATK_PER_LEVEL * float(enemy_level - 1)
@@ -408,7 +410,7 @@ func _execute_enemy_attack() -> void:
 func _on_enemy_form_defeated() -> void:
 	battle_active = false
 	# フェーズ撃破報酬。ステージが進むほど敵HP増加率と同じ係数で増える
-	var reward := int(COIN_PER_FORM * (1.0 + ENEMY_HP_GROWTH_PER_STAGE * float(current_enemy_index)))
+	var reward := int(COIN_PER_FORM * (1.0 + COIN_GROWTH_PER_STAGE * float(current_enemy_index)))
 	if current_phase >= max_phase:
 		reward += COIN_STAGE_CLEAR_BONUS
 		GameState.mark_stage_cleared(player_data.char_id, current_enemy.char_id)
