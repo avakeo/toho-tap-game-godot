@@ -103,6 +103,19 @@ func _ready() -> void:
 func is_fake_mode() -> bool:
 	return _fake_mode
 
+# 現在レイアウトで確保すべきバナー高さ(物理px)。画面サイズ変更時の再計算にも使う。
+func get_banner_height_px() -> int:
+	if not _banner_visible:
+		return 0
+	if _fake_mode:
+		var height := DisplayServer.window_get_size().y
+		if height <= 0:
+			height = int(get_viewport().get_visible_rect().size.y)
+		return int(height * FAKE_BANNER_HEIGHT_RATIO)
+	if _banner != null:
+		return maxi(_banner.get_height_in_pixels(), 0)
+	return 0
+
 # 広告を表示できる状態か。リワードボタンの表示/活性の判定に使う
 func is_ready() -> bool:
 	return _fake_mode or _rewarded_ad != null
@@ -243,13 +256,14 @@ func show_banner() -> void:
 	_banner_visible = true
 	if _fake_mode:
 		# エディタ・PCでもレイアウト確認できるよう、バナー相当の高さだけ通知する
-		banner_height_changed.emit(int(DisplayServer.window_get_size().y * FAKE_BANNER_HEIGHT_RATIO))
+		banner_height_changed.emit(get_banner_height_px())
 		return
 	if not _plugin_available:
+		banner_height_changed.emit(0)
 		return
 	if _banner != null:
 		_banner.show()
-		banner_height_changed.emit(_banner.get_height_in_pixels())
+		banner_height_changed.emit(get_banner_height_px())
 		return
 	var unit_id := _resolve_unit_id(BANNER_UNIT_IDS, TEST_BANNER_UNIT_IDS)
 	if unit_id.is_empty():

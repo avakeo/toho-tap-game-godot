@@ -90,9 +90,14 @@ const SE_DIR := "res://assets/sounds/se/"
 # ステージ開始時点でクリア済みだったか(初回クリア時の勝利会話まで飛ばさないため)
 var _stage_was_cleared: bool = false
 
+# バナー高さは物理pxで保持し、画面サイズが変わるたび論理座標へ変換し直す
+var _banner_height_px := 0
+
 func _ready() -> void:
-	# 画面下にバナー広告を常時表示し、その高さ分だけ各レイヤーのUIを上に詰める
+	# 画面下にバナー広告を常時表示し、端末の安全領域と合わせてUIを内側に収める
 	AdManager.banner_height_changed.connect(_apply_banner_inset)
+	get_viewport().size_changed.connect(_refresh_banner_layout)
+	_apply_banner_inset(0)
 	AdManager.show_banner()
 	se_player.bus = GameState.SE_BUS_NAME
 	_load_se()
@@ -553,6 +558,7 @@ func _on_bgm_selected(path: String) -> void:
 # 図鑑をオーバーレイ表示する。閉じるとホイールが開いたままの状態に戻る
 func _on_gallery_requested() -> void:
 	var layer := CanvasLayer.new()
+	layer.name = "GalleryOverlayLayer"
 	layer.layer = 10
 	layer.process_mode = Node.PROCESS_MODE_ALWAYS
 	var gallery := GALLERY_SCENE.instantiate()
@@ -560,6 +566,8 @@ func _on_gallery_requested() -> void:
 	gallery.closed.connect(layer.queue_free)
 	layer.add_child(gallery)
 	add_child(layer)
+	# バナー表示後に生成されるオーバーレイも、現在の安全領域へ直ちに収める
+	_apply_safe_root_insets(layer, _calculate_safe_insets(_banner_height_px))
 
 func _on_title_requested() -> void:
 	get_tree().paused = false
@@ -568,18 +576,68 @@ func _on_title_requested() -> void:
 func _exit_tree() -> void:
 	AdManager.hide_banner()
 
-# 各 CanvasLayer 直下の Control を SafeRoot でまとめ、SafeRoot の下端を
-# バナー分だけ縮めることで、アンカー配置のUI全体がバナーを避けるようにする
+# 各 CanvasLayer 直下の Control を SafeRoot でまとめ、端末のノッチ・ホーム
+# インジケータと下部バナーを避ける。背景はGame直下なので全面表示を維持する。
 func _apply_banner_inset(height_px: int) -> void:
-	var window_h := float(DisplayServer.window_get_size().y)
-	var viewport_h := get_viewport().get_visible_rect().size.y
-	var inset := 0.0
-	if window_h > 0.0 and height_px > 0:
-		inset = float(height_px) * (viewport_h / window_h)
+	_banner_height_px = maxi(height_px, 0)
+	var insets := _calculate_safe_insets(_banner_height_px)
 	for child in get_children():
 		if child is CanvasLayer and child.name != "BannerPlaceholderLayer":
-			_safe_root_for(child).offset_bottom = -inset
-	_update_banner_placeholder(inset)
+			_apply_safe_root_insets(child, insets)
+	_update_banner_placeholder(_logical_banner_height(_banner_height_px))
+	# 立ち絵はアンカーではなくサイズ計算で配置するため、安全領域変更後に再配置する
+	if is_instance_valid(dialogue_layer):
+		dialogue_layer.call_deferred("refresh_character_layout")
+
+func _refresh_banner_layout() -> void:
+	# 擬似バナーは画面高に比例するので、その時点の値を取り直す
+	_apply_banner_inset(AdManager.get_banner_height_px())
+
+func _calculate_safe_insets(banner_height_px: int) -> Vector4:
+	var window_size := Vector2(DisplayServer.window_get_size())
+	var viewport_size := get_viewport().get_visible_rect().size
+	if window_size.x <= 0.0 or window_size.y <= 0.0:
+		# ヘッドレス実行など物理ウィンドウ寸法を取得できない場合は論理寸法を使う
+		window_size = viewport_size
+
+	var scale_x := viewport_size.x / window_size.x
+	var scale_y := viewport_size.y / window_size.y
+	var safe_left := 0.0
+	var safe_top := 0.0
+	var safe_right := 0.0
+	var safe_bottom := 0.0
+	if OS.get_name() in ["iOS", "Android"]:
+		var safe_area := DisplayServer.get_display_safe_area()
+		safe_left = float(safe_area.position.x)
+		safe_top = float(safe_area.position.y)
+		safe_right = maxf(
+			window_size.x - float(safe_area.position.x + safe_area.size.x), 0.0
+		)
+		safe_bottom = maxf(
+			window_size.y - float(safe_area.position.y + safe_area.size.y), 0.0
+		)
+
+	return Vector4(
+		maxf(safe_left * scale_x, 0.0),
+		maxf(safe_top * scale_y, 0.0),
+		maxf(safe_right * scale_x, 0.0),
+		maxf((safe_bottom + float(banner_height_px)) * scale_y, 0.0),
+	)
+
+func _logical_banner_height(height_px: int) -> float:
+	var window_h := float(DisplayServer.window_get_size().y)
+	if height_px <= 0:
+		return 0.0
+	if window_h <= 0.0:
+		window_h = get_viewport().get_visible_rect().size.y
+	return float(height_px) * (get_viewport().get_visible_rect().size.y / window_h)
+
+func _apply_safe_root_insets(layer: CanvasLayer, insets: Vector4) -> void:
+	var safe_root := _safe_root_for(layer)
+	safe_root.offset_left = insets.x
+	safe_root.offset_top = insets.y
+	safe_root.offset_right = -insets.z
+	safe_root.offset_bottom = -insets.w
 
 # 擬似モード(エディタ・PC)ではバナーが出ないので、同じ高さの帯を描いて位置を確認できるようにする
 var _banner_placeholder: Control
@@ -608,18 +666,18 @@ func _update_banner_placeholder(inset: float) -> void:
 	_banner_placeholder.visible = inset > 0.0
 
 func _safe_root_for(layer: CanvasLayer) -> Control:
-	var existing := layer.get_node_or_null("SafeRoot")
-	if existing != null:
-		return existing
-	var safe_root := Control.new()
-	safe_root.name = "SafeRoot"
-	safe_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	safe_root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var safe_root := layer.get_node_or_null("SafeRoot") as Control
+	if safe_root == null:
+		safe_root = Control.new()
+		safe_root.name = "SafeRoot"
+		safe_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		safe_root.set_anchors_preset(Control.PRESET_FULL_RECT)
+		layer.add_child(safe_root)
+	# SafeRoot作成後に追加されたControlも取り込めるよう、毎回直下を確認する
 	var controls: Array[Node] = []
 	for c in layer.get_children():
-		if c is Control:
+		if c is Control and c != safe_root:
 			controls.append(c)
-	layer.add_child(safe_root)
 	for c in controls:
 		c.reparent(safe_root, false)
 	return safe_root

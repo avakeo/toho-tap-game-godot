@@ -151,12 +151,29 @@ func _set_tatie(rect: TextureRect, chara: CharacterData, expression: String = ""
 	rect.texture = tex
 	if tex == null:
 		return
-	var vp := rect.get_viewport_rect().size
-	var h := vp.y * TATIE_HEIGHT_RATIO
+	_layout_tatie(rect, chara)
+
+# バナーや端末の安全領域が変わったとき、現在の立ち絵を安全領域基準で再配置する
+func refresh_character_layout() -> void:
+	if _left_char != null and left_char_image.texture != null:
+		_layout_tatie(left_char_image, _left_char)
+	if _right_char != null and right_char_image.texture != null:
+		_layout_tatie(right_char_image, _right_char)
+
+func _layout_tatie(rect: TextureRect, chara: CharacterData) -> void:
+	var layout_size := rect.get_viewport_rect().size
+	var parent_control := rect.get_parent() as Control
+	if parent_control != null and parent_control.size.x > 0.0 and parent_control.size.y > 0.0:
+		layout_size = parent_control.size
+	var tex := rect.texture
+	var h := layout_size.y * TATIE_HEIGHT_RATIO
 	var w := h * float(tex.get_width()) / float(tex.get_height())
-	var center_x := vp.x * (TATIE_LEFT_CENTER_X if rect == left_char_image else TATIE_RIGHT_CENTER_X)
+	var center_x := layout_size.x * (TATIE_LEFT_CENTER_X if rect == left_char_image else TATIE_RIGHT_CENTER_X)
 	rect.size = Vector2(w, h)
-	rect.position = Vector2(center_x - w * 0.5, vp.y * TATIE_EYE_LINE_RATIO - chara.tatie_eye_ratio * h)
+	rect.position = Vector2(
+		center_x - w * 0.5,
+		layout_size.y * TATIE_EYE_LINE_RATIO - chara.tatie_eye_ratio * h,
+	)
 
 func _resolve_display_name(speaker: String) -> String:
 	if speaker == _left_char.char_id or speaker == _left_char.display_name:
