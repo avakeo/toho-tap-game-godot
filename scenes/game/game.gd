@@ -442,7 +442,8 @@ func _start_win_talk() -> void:
 
 func _show_result() -> void:
 	_state = State.RESULT
-	result_layer.show_result(AD_XP_BONUS)
+	# 倒した敵の最終形態(衣装破壊)を表示したままリザルトを出す
+	result_layer.show_result(AD_XP_BONUS, current_enemy.battle_forms[max_phase - 1])
 
 # 動画広告視聴の報酬として経験値を付与する(勝利リザルト)
 func _on_xp_bonus() -> void:

@@ -1,5 +1,6 @@
 extends CanvasLayer
 
+@onready var enemy_defeated_image: TextureRect = $EnemyDefeatedImage
 @onready var next_button: Button = $NextButton
 @onready var xp_bonus_button: Button = $XpBonusButton
 @onready var bonus_label: Label = $BonusLabel
@@ -19,8 +20,9 @@ func _ready() -> void:
 	xp_bonus_button.pressed.connect(_on_xp_bonus_button_pressed)
 	AdManager.availability_changed.connect(func(_available: bool) -> void: _refresh_bonus_button())
 
-# bonus_xp<=0 のときはボーナスボタンを出さない
-func show_result(bonus_xp: int = 0) -> void:
+# enemy_texture には倒した敵の最終形態の画像を渡す。bonus_xp<=0 のときはボーナスボタンを出さない
+func show_result(bonus_xp: int = 0, enemy_texture: Texture2D = null) -> void:
+	enemy_defeated_image.texture = enemy_texture
 	result_label.text = "勝利！"
 	_bonus_amount = bonus_xp
 	_bonus_claimed = false
