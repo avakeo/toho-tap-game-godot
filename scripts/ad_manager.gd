@@ -22,7 +22,7 @@ const AD_UNIT_IDS := {
 }
 const INTERSTITIAL_UNIT_IDS := {
 	"Android": "",  # Android版リリース時に設定する
-	"iOS": "",      # AdMobでインタースティシャルユニットを作成したら設定する
+	"iOS": "ca-app-pub-7401497687267095/3172989013",
 }
 # Google公式のテスト用ユニットID。デバッグビルド、または本番IDが未設定のときに使う。
 # 本番ユニットは作成直後 No fill になりやすいので、開発中はこちらで動作確認する。
