@@ -21,7 +21,7 @@ anchor_bottom = 1.0
 mouse_filter = 2
 texture = ExtResource("3_title_bg")
 expand_mode = 1
-stretch_mode = 5
+stretch_mode = 6
 
 [node name="TapHint" type="Label" parent="."]
 anchor_left = 0.1
